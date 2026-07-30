@@ -197,13 +197,22 @@ function ProjectHome() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
-          <SectionLabel>Sequences &amp; scenes</SectionLabel>
+          <div className="flex items-center justify-between gap-3">
+            <SectionLabel>Sequences &amp; scenes</SectionLabel>
+            <Button size="sm" variant="outline" className="mb-2" onClick={() => setSeqOpen(true)}>
+              <Plus className="size-4" /> New sequence
+            </Button>
+          </div>
           <div className="space-y-4">
             {(data?.sequences ?? []).map((seq) => (
               <div key={seq.id} className="rounded-lg border border-border bg-surface">
-                <div className="border-b border-border px-4 py-2.5 text-sm font-semibold">
-                  {seq.title}
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+                  <span className="text-sm font-semibold">{seq.title}</span>
+                  <Button size="sm" variant="ghost" onClick={() => setSceneFor(seq.id)}>
+                    <Plus className="size-3.5" /> New scene
+                  </Button>
                 </div>
+
                 <div className="divide-y divide-border">
                   {(seq.scenes ?? []).map((sc) => (
                     <Link
