@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Sparkles, LogOut } from "lucide-react";
+import { Plus, Sparkles, LogOut, Plug } from "lucide-react";
+import { McpAccessDialog } from "@/components/sf/McpAccessDialog";
+
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
