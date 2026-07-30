@@ -16,6 +16,10 @@ import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
 import { Route as AuthenticatedProjectsProjectIdCastRouteImport } from './routes/_authenticated/projects.$projectId.cast'
+import { Route as AuthenticatedProjectsProjectIdElementsRouteImport } from './routes/_authenticated/projects.$projectId.elements'
+import { Route as AuthenticatedProjectsProjectIdGenerationsRouteImport } from './routes/_authenticated/projects.$projectId.generations'
+import { Route as AuthenticatedProjectsProjectIdLocationsRouteImport } from './routes/_authenticated/projects.$projectId.locations'
+import { Route as AuthenticatedProjectsProjectIdLooksRouteImport } from './routes/_authenticated/projects.$projectId.looks'
 import { Route as AuthenticatedProjectsProjectIdSceneSceneIdRouteImport } from './routes/_authenticated/projects.$projectId.scene.$sceneId'
 import { Route as AuthenticatedProjectsProjectIdShotShotIdRouteImport } from './routes/_authenticated/projects.$projectId.shot.$shotId'
 
@@ -57,6 +61,30 @@ const AuthenticatedProjectsProjectIdCastRoute =
     path: '/cast',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdElementsRoute =
+  AuthenticatedProjectsProjectIdElementsRouteImport.update({
+    id: '/elements',
+    path: '/elements',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdGenerationsRoute =
+  AuthenticatedProjectsProjectIdGenerationsRouteImport.update({
+    id: '/generations',
+    path: '/generations',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdLocationsRoute =
+  AuthenticatedProjectsProjectIdLocationsRouteImport.update({
+    id: '/locations',
+    path: '/locations',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdLooksRoute =
+  AuthenticatedProjectsProjectIdLooksRouteImport.update({
+    id: '/looks',
+    path: '/looks',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdSceneSceneIdRoute =
   AuthenticatedProjectsProjectIdSceneSceneIdRouteImport.update({
     id: '/scene/$sceneId',
@@ -76,6 +104,10 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
+  '/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
+  '/projects/$projectId/generations': typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  '/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
+  '/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -85,6 +117,10 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
+  '/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
+  '/projects/$projectId/generations': typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  '/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
+  '/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -97,6 +133,10 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
+  '/_authenticated/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
+  '/_authenticated/projects/$projectId/generations': typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  '/_authenticated/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
+  '/_authenticated/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/_authenticated/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/_authenticated/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -109,6 +149,10 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/'
     | '/projects/$projectId/cast'
+    | '/projects/$projectId/elements'
+    | '/projects/$projectId/generations'
+    | '/projects/$projectId/locations'
+    | '/projects/$projectId/looks'
     | '/projects/$projectId/'
     | '/projects/$projectId/scene/$sceneId'
     | '/projects/$projectId/shot/$shotId'
@@ -118,6 +162,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/projects'
     | '/projects/$projectId/cast'
+    | '/projects/$projectId/elements'
+    | '/projects/$projectId/generations'
+    | '/projects/$projectId/locations'
+    | '/projects/$projectId/looks'
     | '/projects/$projectId'
     | '/projects/$projectId/scene/$sceneId'
     | '/projects/$projectId/shot/$shotId'
@@ -129,6 +177,10 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId'
     | '/_authenticated/projects/'
     | '/_authenticated/projects/$projectId/cast'
+    | '/_authenticated/projects/$projectId/elements'
+    | '/_authenticated/projects/$projectId/generations'
+    | '/_authenticated/projects/$projectId/locations'
+    | '/_authenticated/projects/$projectId/looks'
     | '/_authenticated/projects/$projectId/'
     | '/_authenticated/projects/$projectId/scene/$sceneId'
     | '/_authenticated/projects/$projectId/shot/$shotId'
@@ -191,6 +243,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdCastRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/elements': {
+      id: '/_authenticated/projects/$projectId/elements'
+      path: '/elements'
+      fullPath: '/projects/$projectId/elements'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdElementsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/generations': {
+      id: '/_authenticated/projects/$projectId/generations'
+      path: '/generations'
+      fullPath: '/projects/$projectId/generations'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdGenerationsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/locations': {
+      id: '/_authenticated/projects/$projectId/locations'
+      path: '/locations'
+      fullPath: '/projects/$projectId/locations'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdLocationsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/looks': {
+      id: '/_authenticated/projects/$projectId/looks'
+      path: '/looks'
+      fullPath: '/projects/$projectId/looks'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdLooksRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
     '/_authenticated/projects/$projectId/scene/$sceneId': {
       id: '/_authenticated/projects/$projectId/scene/$sceneId'
       path: '/scene/$sceneId'
@@ -210,6 +290,10 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdCastRoute: typeof AuthenticatedProjectsProjectIdCastRoute
+  AuthenticatedProjectsProjectIdElementsRoute: typeof AuthenticatedProjectsProjectIdElementsRoute
+  AuthenticatedProjectsProjectIdGenerationsRoute: typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  AuthenticatedProjectsProjectIdLocationsRoute: typeof AuthenticatedProjectsProjectIdLocationsRoute
+  AuthenticatedProjectsProjectIdLooksRoute: typeof AuthenticatedProjectsProjectIdLooksRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
   AuthenticatedProjectsProjectIdSceneSceneIdRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   AuthenticatedProjectsProjectIdShotShotIdRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -219,6 +303,14 @@ const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectI
   {
     AuthenticatedProjectsProjectIdCastRoute:
       AuthenticatedProjectsProjectIdCastRoute,
+    AuthenticatedProjectsProjectIdElementsRoute:
+      AuthenticatedProjectsProjectIdElementsRoute,
+    AuthenticatedProjectsProjectIdGenerationsRoute:
+      AuthenticatedProjectsProjectIdGenerationsRoute,
+    AuthenticatedProjectsProjectIdLocationsRoute:
+      AuthenticatedProjectsProjectIdLocationsRoute,
+    AuthenticatedProjectsProjectIdLooksRoute:
+      AuthenticatedProjectsProjectIdLooksRoute,
     AuthenticatedProjectsProjectIdIndexRoute:
       AuthenticatedProjectsProjectIdIndexRoute,
     AuthenticatedProjectsProjectIdSceneSceneIdRoute:
