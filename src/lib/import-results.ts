@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { uploadImage } from "@/lib/upload";
+import { insertFramesFromUrls } from "@/lib/frames-core";
 
 /**
  * Uploads generation results as candidate frames on a shot, marks the
@@ -18,20 +19,15 @@ export async function importGenerationResults({
   if (!list.length) return 0;
 
   const { data: u } = await supabase.auth.getUser();
-  for (const file of list) {
-    const url = await uploadImage(file);
-    const { error } = await supabase.from("frames").insert({
-      user_id: u.user!.id,
-      shot_id: shotId,
-      image_url: url,
-      kind: "keyframe",
-      is_approved: false,
-      notes: `Imported from generation ${generationId.slice(0, 8)}`,
-    });
-    if (error) throw error;
-  }
+  const urls: string[] = [];
+  for (const file of list) urls.push(await uploadImage(file));
 
-  await supabase.from("generations").update({ status: "imported" }).eq("id", generationId);
-  await supabase.from("shots").update({ status: "candidates" }).eq("id", shotId);
+  await insertFramesFromUrls(supabase, {
+    userId: u.user!.id,
+    shotId,
+    imageUrls: urls,
+    kind: "keyframe",
+    generationId,
+  });
   return list.length;
 }
