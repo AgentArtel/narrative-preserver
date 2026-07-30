@@ -228,7 +228,7 @@ export async function buildGenerationPackage(shotId: string): Promise<BuiltPacka
       look: look?.name ?? null,
       palette: palette.map((p) => p.hex),
       previous_approved_frame: prevApproved ?? null,
-      reference_images: refs,
+      reference_images: [...assetRefs, ...refs],
       canon_records_applied: (canon ?? []).length,
     },
   };
