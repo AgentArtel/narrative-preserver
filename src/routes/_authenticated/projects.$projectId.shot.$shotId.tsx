@@ -324,7 +324,23 @@ function ShotDetail() {
                   <div className="mt-1 text-muted-foreground">
                     {new Date(g.created_at).toLocaleString()}
                   </div>
+                  {g.status === "handed_off" && (
+                    <label className="mt-2 inline-flex">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => importForGeneration(g.id, e.target.files)}
+                      />
+                      <span className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-input px-2.5 text-xs font-medium hover:bg-surface-raised">
+                        <Upload className="size-3.5" />
+                        {importingId === g.id ? "Importing…" : "Import result"}
+                      </span>
+                    </label>
+                  )}
                 </div>
+
               ))}
               {(data?.generations ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">No handoffs yet.</p>
