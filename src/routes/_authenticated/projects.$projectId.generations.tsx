@@ -20,6 +20,14 @@ import {
 } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/generations")({
+  head: () => ({
+    meta: [
+      { title: "Generations — StoryForge" },
+      { name: "description", content: "Filterable history of every generation handoff and imported result." },
+      { property: "og:title", content: "Generations — StoryForge" },
+      { property: "og:description", content: "Filterable history of every generation handoff and imported result." },
+    ],
+  }),
   component: GenerationsPage,
 });
 

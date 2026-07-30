@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
+  head: () => ({
+    meta: [
+      { title: "Project — StoryForge" },
+      { name: "description", content: "Persistent visual-production workspace for AI-generated storytelling." },
+      { property: "og:title", content: "Project — StoryForge" },
+      { property: "og:description", content: "Persistent visual-production workspace for AI-generated storytelling." },
+    ],
+  }),
   component: ProjectLayout,
   errorComponent: ({ error }) => (
     <div className="p-8 text-sm text-destructive">{error.message}</div>

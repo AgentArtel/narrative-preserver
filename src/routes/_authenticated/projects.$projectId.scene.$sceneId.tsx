@@ -28,6 +28,14 @@ import { Copy, GripVertical, Package, Plus, PanelLeft, PanelRight } from "lucide
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/scene/$sceneId")({
+  head: () => ({
+    meta: [
+      { title: "Scene Workspace — StoryForge" },
+      { name: "description", content: "Storyboard, shot list and per-shot generation context in one workspace." },
+      { property: "og:title", content: "Scene Workspace — StoryForge" },
+      { property: "og:description", content: "Storyboard, shot list and per-shot generation context in one workspace." },
+    ],
+  }),
   component: SceneWorkspace,
   errorComponent: ({ error }) => <div className="p-8 text-sm text-destructive">{error.message}</div>,
 });

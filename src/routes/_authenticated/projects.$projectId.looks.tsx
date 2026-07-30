@@ -20,6 +20,14 @@ import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/looks")({
+  head: () => ({
+    meta: [
+      { title: "Looks — StoryForge" },
+      { name: "description", content: "Palettes, prompt fragments and negative constraints per project look." },
+      { property: "og:title", content: "Looks — StoryForge" },
+      { property: "og:description", content: "Palettes, prompt fragments and negative constraints per project look." },
+    ],
+  }),
   component: LooksPage,
 });
 

@@ -12,6 +12,14 @@ import { cn } from "@/lib/utils";
 import { Check, Package, Sparkles, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/shot/$shotId")({
+  head: () => ({
+    meta: [
+      { title: "Shot Detail — StoryForge" },
+      { name: "description", content: "Approve candidate frames, compare options and promote aspects to canon." },
+      { property: "og:title", content: "Shot Detail — StoryForge" },
+      { property: "og:description", content: "Approve candidate frames, compare options and promote aspects to canon." },
+    ],
+  }),
   component: ShotDetail,
   errorComponent: ({ error }) => <div className="p-8 text-sm text-destructive">{error.message}</div>,
 });
