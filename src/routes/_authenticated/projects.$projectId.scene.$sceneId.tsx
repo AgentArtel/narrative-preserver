@@ -532,17 +532,22 @@ function SceneWorkspace() {
               <div className="space-y-2">
                 <SectionLabel>Shot</SectionLabel>
                 <Textarea
-                  value={selected.description ?? ""}
-                  onChange={(e) =>
-                    patchShot.mutate({ id: selected.id, patch: { description: e.target.value } })
+                  value={fields.description}
+                  onChange={(e) => setFields((f) => ({ ...f, description: e.target.value }))}
+                  onBlur={() =>
+                    patchShot.mutate({
+                      id: selected.id,
+                      patch: { description: fields.description },
+                    })
                   }
                   rows={3}
                 />
                 <Textarea
                   placeholder="Dialogue"
-                  value={selected.dialogue ?? ""}
-                  onChange={(e) =>
-                    patchShot.mutate({ id: selected.id, patch: { dialogue: e.target.value } })
+                  value={fields.dialogue}
+                  onChange={(e) => setFields((f) => ({ ...f, dialogue: e.target.value }))}
+                  onBlur={() =>
+                    patchShot.mutate({ id: selected.id, patch: { dialogue: fields.dialogue } })
                   }
                   rows={2}
                 />
@@ -550,14 +555,18 @@ function SceneWorkspace() {
                   <Input
                     type="number"
                     placeholder="Seconds"
-                    value={selected.duration_seconds ?? ""}
-                    onChange={(e) =>
+                    value={fields.duration}
+                    onChange={(e) => setFields((f) => ({ ...f, duration: e.target.value }))}
+                    onBlur={() =>
                       patchShot.mutate({
                         id: selected.id,
-                        patch: { duration_seconds: e.target.value ? Number(e.target.value) : null },
+                        patch: {
+                          duration_seconds: fields.duration ? Number(fields.duration) : null,
+                        },
                       })
                     }
                   />
+
                   <Select
                     value={selected.status}
                     onValueChange={(v) =>
