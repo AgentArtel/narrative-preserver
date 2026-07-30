@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Sparkles, LogOut } from "lucide-react";
+import { Plus, Sparkles, LogOut, Plug } from "lucide-react";
+import { McpAccessDialog } from "@/components/sf/McpAccessDialog";
+
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
@@ -26,6 +28,8 @@ function ProjectsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
@@ -88,10 +92,17 @@ function ProjectsPage() {
         <Link to="/" className="label-caps hover:text-foreground">
           StoryForge
         </Link>
-        <Button variant="ghost" size="sm" onClick={signOut}>
-          <LogOut className="size-4" /> Sign out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setMcpOpen(true)}>
+            <Plug className="size-4" /> MCP access
+          </Button>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="size-4" /> Sign out
+          </Button>
+        </div>
       </header>
+      <McpAccessDialog open={mcpOpen} onOpenChange={setMcpOpen} />
+
 
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">

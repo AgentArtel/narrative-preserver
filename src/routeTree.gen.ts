@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
+import { Route as ApiMcpKeyRouteImport } from './routes/api/mcp.$key'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
 import { Route as AuthenticatedProjectsProjectIdCastRouteImport } from './routes/_authenticated/projects.$projectId.cast'
 import { Route as AuthenticatedProjectsProjectIdElementsRouteImport } from './routes/_authenticated/projects.$projectId.elements'
@@ -49,6 +50,11 @@ const AuthenticatedProjectsProjectIdRoute =
     path: '/projects/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiMcpKeyRoute = ApiMcpKeyRouteImport.update({
+  id: '/api/mcp/$key',
+  path: '/api/mcp/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProjectsProjectIdIndexRoute =
   AuthenticatedProjectsProjectIdIndexRouteImport.update({
     id: '/',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/api/mcp/$key': typeof ApiMcpKeyRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
   '/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/api/mcp/$key': typeof ApiMcpKeyRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
   '/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/api/mcp/$key': typeof ApiMcpKeyRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
   '/_authenticated/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/projects/$projectId'
+    | '/api/mcp/$key'
     | '/projects/'
     | '/projects/$projectId/cast'
     | '/projects/$projectId/elements'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/api/mcp/$key'
     | '/projects'
     | '/projects/$projectId/cast'
     | '/projects/$projectId/elements'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/projects/$projectId'
+    | '/api/mcp/$key'
     | '/_authenticated/projects/'
     | '/_authenticated/projects/$projectId/cast'
     | '/_authenticated/projects/$projectId/elements'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiMcpKeyRoute: typeof ApiMcpKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/mcp/$key': {
+      id: '/api/mcp/$key'
+      path: '/api/mcp/$key'
+      fullPath: '/api/mcp/$key'
+      preLoaderRoute: typeof ApiMcpKeyRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projects/$projectId/': {
       id: '/_authenticated/projects/$projectId/'
@@ -342,6 +362,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiMcpKeyRoute: ApiMcpKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
