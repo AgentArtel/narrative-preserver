@@ -313,7 +313,7 @@ function SceneWorkspace() {
     invalidate();
   }
 
-  const camera = (selected?.camera ?? {}) as Camera;
+  
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
