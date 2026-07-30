@@ -113,23 +113,52 @@ export function PromoteToCanonDialog({
     setSaving(true);
     try {
       const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("canon_records").insert(
-        selected.map((r) => ({
-          user_id: u.user!.id,
-          project_id: projectId,
-          subject_type: r.subjectType,
-          subject_id: r.subjectId,
-          aspect: r.aspect,
-          description: notes[r.key] || r.label,
-          source_frame_id: frameId,
-        })),
-      );
-      if (error) throw error;
+      const { data: existing } = await supabase
+        .from("canon_records")
+        .select("id, subject_type, subject_id, aspect")
+        .eq("project_id", projectId);
+
+      let created = 0;
+      let updated = 0;
+      for (const r of selected) {
+        const match = (existing ?? []).find(
+          (c) =>
+            c.subject_type === r.subjectType && c.subject_id === r.subjectId && c.aspect === r.aspect,
+        );
+        const description = notes[r.key] || r.label;
+        if (match) {
+          const { error } = await supabase
+            .from("canon_records")
+            .update({ description, source_frame_id: frameId })
+            .eq("id", match.id);
+          if (error) throw error;
+          updated++;
+        } else {
+          const { error } = await supabase.from("canon_records").insert({
+            user_id: u.user!.id,
+            project_id: projectId,
+            subject_type: r.subjectType,
+            subject_id: r.subjectId,
+            aspect: r.aspect,
+            description,
+            source_frame_id: frameId,
+          });
+          if (error) throw error;
+          created++;
+        }
+      }
+
       qc.invalidateQueries();
-      toast.success(`${selected.length} canon record${selected.length === 1 ? "" : "s"} created`);
+      toast.success(
+        [created ? `${created} canon record${created === 1 ? "" : "s"} created` : null,
+         updated ? `${updated} updated` : null]
+          .filter(Boolean)
+          .join(" · "),
+      );
       setChecked({});
       setNotes({});
       onOpenChange(false);
+
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
