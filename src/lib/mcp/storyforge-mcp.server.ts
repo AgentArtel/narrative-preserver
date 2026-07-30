@@ -783,21 +783,22 @@ async function addJoin(
 ) {
   await own(ctx, "shots", shotId);
   await own(ctx, assetTable, assetId);
-  const { data: existing } = await ctx.db
-    .from(table)
+  const { data: existing } = (await ctx.db
+    .from(table as never)
     .select("id, state")
     .eq("shot_id", shotId)
     .eq(fkColumn, assetId)
     .eq("user_id", ctx.userId)
-    .maybeSingle();
+    .maybeSingle()) as { data: { id: string; state: unknown } | null };
   if (existing) {
     const merged = { ...(existing.state as Record<string, unknown>), ...(state ?? {}) };
     const { error } = await ctx.db
-      .from(table)
-      .update({ state: merged as never })
+      .from(table as never)
+      .update({ state: merged } as never)
       .eq("id", existing.id)
       .eq("user_id", ctx.userId);
     if (error) throw new Error(error.message);
+
     return { id: existing.id, shot_id: shotId, [fkColumn]: assetId, created: false };
   }
   const row = await insertRow(ctx, table, { shot_id: shotId, [fkColumn]: assetId, state: state ?? {} }, "id");
