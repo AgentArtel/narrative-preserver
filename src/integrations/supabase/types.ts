@@ -14,16 +14,758 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      asset_references: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          notes: string | null
+          project_id: string
+          roles: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          notes?: string | null
+          project_id: string
+          roles?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          notes?: string | null
+          project_id?: string
+          roles?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_references_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beats: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          scene_id: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          scene_id: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          scene_id?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beats_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canon_records: {
+        Row: {
+          aspect: string
+          created_at: string
+          description: string | null
+          id: string
+          project_id: string
+          source_frame_id: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["canon_subject"]
+          user_id: string
+        }
+        Insert: {
+          aspect: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id: string
+          source_frame_id?: string | null
+          subject_id: string
+          subject_type: Database["public"]["Enums"]["canon_subject"]
+          user_id: string
+        }
+        Update: {
+          aspect?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string
+          source_frame_id?: string | null
+          subject_id?: string
+          subject_type?: Database["public"]["Enums"]["canon_subject"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canon_records_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canon_records_source_frame_id_fkey"
+            columns: ["source_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      characters: {
+        Row: {
+          attributes: Json
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          project_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          attributes?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          project_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          attributes?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "characters_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elements: {
+        Row: {
+          created_at: string
+          description: string | null
+          element_type: string | null
+          id: string
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          element_type?: string | null
+          id?: string
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          element_type?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      frames: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          is_approved: boolean
+          kind: Database["public"]["Enums"]["frame_kind"]
+          notes: string | null
+          shot_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          is_approved?: boolean
+          kind?: Database["public"]["Enums"]["frame_kind"]
+          notes?: string | null
+          shot_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_approved?: boolean
+          kind?: Database["public"]["Enums"]["frame_kind"]
+          notes?: string | null
+          shot_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "frames_shot_id_fkey"
+            columns: ["shot_id"]
+            isOneToOne: false
+            referencedRelation: "shots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generations: {
+        Row: {
+          cost_credits: number | null
+          created_at: string
+          id: string
+          model: string | null
+          negative_prompt: string | null
+          prompt: string
+          provider: string
+          reference_summary: Json
+          settings: Json
+          shot_id: string
+          status: Database["public"]["Enums"]["generation_status"]
+          tool: string | null
+          user_id: string
+        }
+        Insert: {
+          cost_credits?: number | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          negative_prompt?: string | null
+          prompt: string
+          provider?: string
+          reference_summary?: Json
+          settings?: Json
+          shot_id: string
+          status?: Database["public"]["Enums"]["generation_status"]
+          tool?: string | null
+          user_id: string
+        }
+        Update: {
+          cost_credits?: number | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          negative_prompt?: string | null
+          prompt?: string
+          provider?: string
+          reference_summary?: Json
+          settings?: Json
+          shot_id?: string
+          status?: Database["public"]["Enums"]["generation_status"]
+          tool?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generations_shot_id_fkey"
+            columns: ["shot_id"]
+            isOneToOne: false
+            referencedRelation: "shots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      looks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          negative_constraints: string[]
+          palette: Json
+          project_id: string
+          prompt_fragments: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          negative_constraints?: string[]
+          palette?: Json
+          project_id: string
+          prompt_fragments?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          negative_constraints?: string[]
+          palette?: Json
+          project_id?: string
+          prompt_fragments?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "looks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      provider_identities: {
+        Row: {
+          capability: string | null
+          created_at: string
+          external_id: string
+          id: string
+          metadata: Json
+          owner_id: string
+          owner_type: string
+          provider: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          capability?: string | null
+          created_at?: string
+          external_id: string
+          id?: string
+          metadata?: Json
+          owner_id: string
+          owner_type: string
+          provider: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          capability?: string | null
+          created_at?: string
+          external_id?: string
+          id?: string
+          metadata?: Json
+          owner_id?: string
+          owner_type?: string
+          provider?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reference_links: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          owner_type: string
+          reference_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          owner_type: string
+          reference_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          owner_type?: string
+          reference_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_links_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "asset_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenes: {
+        Row: {
+          brief: string | null
+          created_at: string
+          id: string
+          sequence_id: string
+          sort_order: number
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          brief?: string | null
+          created_at?: string
+          id?: string
+          sequence_id: string
+          sort_order?: number
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          brief?: string | null
+          created_at?: string
+          id?: string
+          sequence_id?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenes_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequences: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          sort_order: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          sort_order?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          sort_order?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequences_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shot_characters: {
+        Row: {
+          character_id: string
+          id: string
+          shot_id: string
+          state: Json
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          id?: string
+          shot_id: string
+          state?: Json
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          id?: string
+          shot_id?: string
+          state?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shot_characters_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shot_characters_shot_id_fkey"
+            columns: ["shot_id"]
+            isOneToOne: false
+            referencedRelation: "shots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shot_elements: {
+        Row: {
+          element_id: string
+          id: string
+          shot_id: string
+          state: Json
+          user_id: string
+        }
+        Insert: {
+          element_id: string
+          id?: string
+          shot_id: string
+          state?: Json
+          user_id: string
+        }
+        Update: {
+          element_id?: string
+          id?: string
+          shot_id?: string
+          state?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shot_elements_element_id_fkey"
+            columns: ["element_id"]
+            isOneToOne: false
+            referencedRelation: "elements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shot_elements_shot_id_fkey"
+            columns: ["shot_id"]
+            isOneToOne: false
+            referencedRelation: "shots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shots: {
+        Row: {
+          beat_id: string | null
+          camera: Json
+          created_at: string
+          description: string | null
+          dialogue: string | null
+          duration_seconds: number | null
+          id: string
+          location_id: string | null
+          location_state: Json
+          look_id: string | null
+          scene_id: string
+          shot_number: string
+          sort_order: number
+          status: Database["public"]["Enums"]["shot_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beat_id?: string | null
+          camera?: Json
+          created_at?: string
+          description?: string | null
+          dialogue?: string | null
+          duration_seconds?: number | null
+          id?: string
+          location_id?: string | null
+          location_state?: Json
+          look_id?: string | null
+          scene_id: string
+          shot_number: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["shot_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beat_id?: string | null
+          camera?: Json
+          created_at?: string
+          description?: string | null
+          dialogue?: string | null
+          duration_seconds?: number | null
+          id?: string
+          location_id?: string | null
+          location_state?: Json
+          look_id?: string | null
+          scene_id?: string
+          shot_number?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["shot_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shots_beat_id_fkey"
+            columns: ["beat_id"]
+            isOneToOne: false
+            referencedRelation: "beats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shots_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shots_look_id_fkey"
+            columns: ["look_id"]
+            isOneToOne: false
+            referencedRelation: "looks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shots_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      seed_demo_project: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      canon_subject: "character" | "location" | "element" | "scene" | "shot"
+      frame_kind:
+        | "concept"
+        | "storyboard"
+        | "keyframe"
+        | "start"
+        | "end"
+        | "final"
+      generation_status: "handed_off" | "imported" | "rejected"
+      shot_status:
+        | "idea"
+        | "drafting"
+        | "ready"
+        | "generating"
+        | "candidates"
+        | "revision"
+        | "approved"
+        | "final"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +892,27 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      canon_subject: ["character", "location", "element", "scene", "shot"],
+      frame_kind: [
+        "concept",
+        "storyboard",
+        "keyframe",
+        "start",
+        "end",
+        "final",
+      ],
+      generation_status: ["handed_off", "imported", "rejected"],
+      shot_status: [
+        "idea",
+        "drafting",
+        "ready",
+        "generating",
+        "candidates",
+        "revision",
+        "approved",
+        "final",
+      ],
+    },
   },
 } as const
