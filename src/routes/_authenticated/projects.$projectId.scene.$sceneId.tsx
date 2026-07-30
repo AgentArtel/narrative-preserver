@@ -329,7 +329,25 @@ function SceneWorkspace() {
                   </li>
                 ))}
             </ol>
+            <form
+              className="mt-2 flex gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (beatText.trim()) addBeat.mutate(beatText.trim());
+              }}
+            >
+              <Input
+                className="h-8 text-xs"
+                placeholder="Add beat…"
+                value={beatText}
+                onChange={(e) => setBeatText(e.target.value)}
+              />
+              <Button type="submit" size="sm" variant="outline" disabled={!beatText.trim()}>
+                <Plus className="size-3.5" />
+              </Button>
+            </form>
           </div>
+
 
           <div className="mt-6 border-t border-border pt-4">
             <SectionLabel>Shots</SectionLabel>
