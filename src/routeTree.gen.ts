@@ -16,6 +16,7 @@ import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
 import { Route as AuthenticatedProjectsProjectIdSceneSceneIdRouteImport } from './routes/_authenticated/projects.$projectId.scene.$sceneId'
+import { Route as AuthenticatedProjectsProjectIdShotShotIdRouteImport } from './routes/_authenticated/projects.$projectId.shot.$shotId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -55,6 +56,12 @@ const AuthenticatedProjectsProjectIdSceneSceneIdRoute =
     path: '/scene/$sceneId',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdShotShotIdRoute =
+  AuthenticatedProjectsProjectIdShotShotIdRouteImport.update({
+    id: '/shot/$shotId',
+    path: '/shot/$shotId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +78,7 @@ export interface FileRoutesByTo {
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +89,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/_authenticated/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  '/_authenticated/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,6 +100,7 @@ export interface FileRouteTypes {
     | '/projects/'
     | '/projects/$projectId/'
     | '/projects/$projectId/scene/$sceneId'
+    | '/projects/$projectId/shot/$shotId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/projects/$projectId'
     | '/projects/$projectId/scene/$sceneId'
+    | '/projects/$projectId/shot/$shotId'
   id:
     | '__root__'
     | '/'
@@ -106,6 +118,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/'
     | '/_authenticated/projects/$projectId/'
     | '/_authenticated/projects/$projectId/scene/$sceneId'
+    | '/_authenticated/projects/$projectId/shot/$shotId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -165,12 +178,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/shot/$shotId': {
+      id: '/_authenticated/projects/$projectId/shot/$shotId'
+      path: '/shot/$shotId'
+      fullPath: '/projects/$projectId/shot/$shotId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
   }
 }
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
   AuthenticatedProjectsProjectIdSceneSceneIdRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  AuthenticatedProjectsProjectIdShotShotIdRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 
 const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
@@ -179,6 +200,8 @@ const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectI
       AuthenticatedProjectsProjectIdIndexRoute,
     AuthenticatedProjectsProjectIdSceneSceneIdRoute:
       AuthenticatedProjectsProjectIdSceneSceneIdRoute,
+    AuthenticatedProjectsProjectIdShotShotIdRoute:
+      AuthenticatedProjectsProjectIdShotShotIdRoute,
   }
 
 const AuthenticatedProjectsProjectIdRouteWithChildren =
