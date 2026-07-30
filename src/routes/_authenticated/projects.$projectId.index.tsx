@@ -124,6 +124,61 @@ function ProjectHome() {
 
   const pending = (data?.shots ?? []).filter((s) => s.status === "candidates");
 
+  const createSequence = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("sequences").insert({
+        user_id: u.user!.id,
+        project_id: projectId,
+        title: seqTitle.trim(),
+        sort_order: data?.sequences?.length ?? 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSeqOpen(false);
+      setSeqTitle("");
+      qc.invalidateQueries({ queryKey: ["project-home", projectId] });
+      qc.invalidateQueries({ queryKey: ["scene-tree", projectId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createScene = useMutation({
+    mutationFn: async () => {
+      const seq = (data?.sequences ?? []).find((s) => s.id === sceneFor);
+      const { data: u } = await supabase.auth.getUser();
+      const { data: row, error } = await supabase
+        .from("scenes")
+        .insert({
+          user_id: u.user!.id,
+          sequence_id: sceneFor!,
+          title: sceneTitle.trim(),
+          brief: sceneBrief || null,
+          status: "drafting",
+          sort_order: seq?.scenes?.length ?? 0,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return row;
+    },
+    onSuccess: (row) => {
+      setSceneFor(null);
+      setSceneTitle("");
+      setSceneBrief("");
+      qc.invalidateQueries({ queryKey: ["project-home", projectId] });
+      qc.invalidateQueries({ queryKey: ["scene-tree", projectId] });
+      navigate({
+        to: "/projects/$projectId/scene/$sceneId",
+        params: { projectId, sceneId: row.id },
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">{data?.project?.title}</h1>
