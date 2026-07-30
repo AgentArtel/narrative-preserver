@@ -27,14 +27,14 @@ export function useProject() {
   });
 }
 
-const NAV = [
+const NAV: { to: string; label: string; exact?: boolean }[] = [
   { to: "/projects/$projectId", label: "Home", exact: true },
   { to: "/projects/$projectId/cast", label: "Cast" },
   { to: "/projects/$projectId/locations", label: "Locations" },
   { to: "/projects/$projectId/elements", label: "Elements" },
   { to: "/projects/$projectId/looks", label: "Looks" },
   { to: "/projects/$projectId/generations", label: "Generations" },
-] as const;
+];
 
 function ProjectLayout() {
   const { projectId } = useParams({ from: "/_authenticated/projects/$projectId" });
