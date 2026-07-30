@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
+import { Route as AuthenticatedProjectsProjectIdCastRouteImport } from './routes/_authenticated/projects.$projectId.cast'
 import { Route as AuthenticatedProjectsProjectIdSceneSceneIdRouteImport } from './routes/_authenticated/projects.$projectId.scene.$sceneId'
 import { Route as AuthenticatedProjectsProjectIdShotShotIdRouteImport } from './routes/_authenticated/projects.$projectId.shot.$shotId'
 
@@ -50,6 +51,12 @@ const AuthenticatedProjectsProjectIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdCastRoute =
+  AuthenticatedProjectsProjectIdCastRouteImport.update({
+    id: '/cast',
+    path: '/cast',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdSceneSceneIdRoute =
   AuthenticatedProjectsProjectIdSceneSceneIdRouteImport.update({
     id: '/scene/$sceneId',
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -76,6 +84,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -87,6 +96,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/_authenticated/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/_authenticated/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/_authenticated/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/projects/$projectId'
     | '/projects/'
+    | '/projects/$projectId/cast'
     | '/projects/$projectId/'
     | '/projects/$projectId/scene/$sceneId'
     | '/projects/$projectId/shot/$shotId'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/projects'
+    | '/projects/$projectId/cast'
     | '/projects/$projectId'
     | '/projects/$projectId/scene/$sceneId'
     | '/projects/$projectId/shot/$shotId'
@@ -116,6 +128,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/projects/$projectId'
     | '/_authenticated/projects/'
+    | '/_authenticated/projects/$projectId/cast'
     | '/_authenticated/projects/$projectId/'
     | '/_authenticated/projects/$projectId/scene/$sceneId'
     | '/_authenticated/projects/$projectId/shot/$shotId'
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/cast': {
+      id: '/_authenticated/projects/$projectId/cast'
+      path: '/cast'
+      fullPath: '/projects/$projectId/cast'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCastRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
     '/_authenticated/projects/$projectId/scene/$sceneId': {
       id: '/_authenticated/projects/$projectId/scene/$sceneId'
       path: '/scene/$sceneId'
@@ -189,6 +209,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
+  AuthenticatedProjectsProjectIdCastRoute: typeof AuthenticatedProjectsProjectIdCastRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
   AuthenticatedProjectsProjectIdSceneSceneIdRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   AuthenticatedProjectsProjectIdShotShotIdRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRoute
@@ -196,6 +217,8 @@ interface AuthenticatedProjectsProjectIdRouteChildren {
 
 const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
   {
+    AuthenticatedProjectsProjectIdCastRoute:
+      AuthenticatedProjectsProjectIdCastRoute,
     AuthenticatedProjectsProjectIdIndexRoute:
       AuthenticatedProjectsProjectIdIndexRoute,
     AuthenticatedProjectsProjectIdSceneSceneIdRoute:
