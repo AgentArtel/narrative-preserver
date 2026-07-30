@@ -297,6 +297,74 @@ function ProjectHome() {
           </div>
         </section>
       </div>
+
+      <Dialog open={seqOpen} onOpenChange={setSeqOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New sequence</DialogTitle>
+            <DialogDescription>
+              A sequence groups the scenes of one continuous stretch of the story.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="seq-title">Title</Label>
+            <Input
+              id="seq-title"
+              value={seqTitle}
+              onChange={(e) => setSeqTitle(e.target.value)}
+              placeholder="Opening Cinematic"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => createSequence.mutate()}
+              disabled={!seqTitle.trim() || createSequence.isPending}
+            >
+              Create sequence
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!sceneFor} onOpenChange={(v) => !v && setSceneFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New scene</DialogTitle>
+            <DialogDescription>
+              A scene holds beats and shots. You will land in its workspace after creating it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="scene-title">Title</Label>
+              <Input
+                id="scene-title"
+                value={sceneTitle}
+                onChange={(e) => setSceneTitle(e.target.value)}
+                placeholder="The hero enters the ruined cathedral"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="scene-brief">Brief</Label>
+              <Textarea
+                id="scene-brief"
+                value={sceneBrief}
+                onChange={(e) => setSceneBrief(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => createScene.mutate()}
+              disabled={!sceneTitle.trim() || createScene.isPending}
+            >
+              Create scene
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
+
   );
 }
