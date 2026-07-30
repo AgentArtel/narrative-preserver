@@ -6,6 +6,20 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
+  head: () => ({
+    meta: [
+      { title: "Project Home — StoryForge" },
+      {
+        name: "description",
+        content: "Counts, pending approvals and recent generation handoffs for your production.",
+      },
+      { property: "og:title", content: "Project Home — StoryForge" },
+      {
+        property: "og:description",
+        content: "Counts, pending approvals and recent generation handoffs for your production.",
+      },
+    ],
+  }),
   component: ProjectHome,
 });
 
