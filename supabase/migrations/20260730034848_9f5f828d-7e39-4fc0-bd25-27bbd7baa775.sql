@@ -1,0 +1,1 @@
+ALTER FUNCTION public.seed_demo_project() SECURITY INVOKER;

@@ -10,33 +10,186 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
+import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
+import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
+import { Route as AuthenticatedProjectsProjectIdCastRouteImport } from './routes/_authenticated/projects.$projectId.cast'
+import { Route as AuthenticatedProjectsProjectIdElementsRouteImport } from './routes/_authenticated/projects.$projectId.elements'
+import { Route as AuthenticatedProjectsProjectIdGenerationsRouteImport } from './routes/_authenticated/projects.$projectId.generations'
+import { Route as AuthenticatedProjectsProjectIdLocationsRouteImport } from './routes/_authenticated/projects.$projectId.locations'
+import { Route as AuthenticatedProjectsProjectIdLooksRouteImport } from './routes/_authenticated/projects.$projectId.looks'
+import { Route as AuthenticatedProjectsProjectIdSceneSceneIdRouteImport } from './routes/_authenticated/projects.$projectId.scene.$sceneId'
+import { Route as AuthenticatedProjectsProjectIdShotShotIdRouteImport } from './routes/_authenticated/projects.$projectId.shot.$shotId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProjectsIndexRoute =
+  AuthenticatedProjectsIndexRouteImport.update({
+    id: '/projects/',
+    path: '/projects/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdRoute =
+  AuthenticatedProjectsProjectIdRouteImport.update({
+    id: '/projects/$projectId',
+    path: '/projects/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdIndexRoute =
+  AuthenticatedProjectsProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdCastRoute =
+  AuthenticatedProjectsProjectIdCastRouteImport.update({
+    id: '/cast',
+    path: '/cast',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdElementsRoute =
+  AuthenticatedProjectsProjectIdElementsRouteImport.update({
+    id: '/elements',
+    path: '/elements',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdGenerationsRoute =
+  AuthenticatedProjectsProjectIdGenerationsRouteImport.update({
+    id: '/generations',
+    path: '/generations',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdLocationsRoute =
+  AuthenticatedProjectsProjectIdLocationsRouteImport.update({
+    id: '/locations',
+    path: '/locations',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdLooksRoute =
+  AuthenticatedProjectsProjectIdLooksRouteImport.update({
+    id: '/looks',
+    path: '/looks',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdSceneSceneIdRoute =
+  AuthenticatedProjectsProjectIdSceneSceneIdRouteImport.update({
+    id: '/scene/$sceneId',
+    path: '/scene/$sceneId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdShotShotIdRoute =
+  AuthenticatedProjectsProjectIdShotShotIdRouteImport.update({
+    id: '/shot/$shotId',
+    path: '/shot/$shotId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
+  '/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
+  '/projects/$projectId/generations': typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  '/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
+  '/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
+  '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
+  '/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
+  '/projects/$projectId/generations': typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  '/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
+  '/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
+  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/_authenticated/projects/$projectId/cast': typeof AuthenticatedProjectsProjectIdCastRoute
+  '/_authenticated/projects/$projectId/elements': typeof AuthenticatedProjectsProjectIdElementsRoute
+  '/_authenticated/projects/$projectId/generations': typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  '/_authenticated/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
+  '/_authenticated/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
+  '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  '/_authenticated/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/projects/$projectId'
+    | '/projects/'
+    | '/projects/$projectId/cast'
+    | '/projects/$projectId/elements'
+    | '/projects/$projectId/generations'
+    | '/projects/$projectId/locations'
+    | '/projects/$projectId/looks'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/scene/$sceneId'
+    | '/projects/$projectId/shot/$shotId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/projects'
+    | '/projects/$projectId/cast'
+    | '/projects/$projectId/elements'
+    | '/projects/$projectId/generations'
+    | '/projects/$projectId/locations'
+    | '/projects/$projectId/looks'
+    | '/projects/$projectId'
+    | '/projects/$projectId/scene/$sceneId'
+    | '/projects/$projectId/shot/$shotId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/projects/$projectId'
+    | '/_authenticated/projects/'
+    | '/_authenticated/projects/$projectId/cast'
+    | '/_authenticated/projects/$projectId/elements'
+    | '/_authenticated/projects/$projectId/generations'
+    | '/_authenticated/projects/$projectId/locations'
+    | '/_authenticated/projects/$projectId/looks'
+    | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/scene/$sceneId'
+    | '/_authenticated/projects/$projectId/shot/$shotId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +201,148 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/projects/': {
+      id: '/_authenticated/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId': {
+      id: '/_authenticated/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/': {
+      id: '/_authenticated/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/cast': {
+      id: '/_authenticated/projects/$projectId/cast'
+      path: '/cast'
+      fullPath: '/projects/$projectId/cast'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCastRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/elements': {
+      id: '/_authenticated/projects/$projectId/elements'
+      path: '/elements'
+      fullPath: '/projects/$projectId/elements'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdElementsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/generations': {
+      id: '/_authenticated/projects/$projectId/generations'
+      path: '/generations'
+      fullPath: '/projects/$projectId/generations'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdGenerationsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/locations': {
+      id: '/_authenticated/projects/$projectId/locations'
+      path: '/locations'
+      fullPath: '/projects/$projectId/locations'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdLocationsRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/looks': {
+      id: '/_authenticated/projects/$projectId/looks'
+      path: '/looks'
+      fullPath: '/projects/$projectId/looks'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdLooksRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/scene/$sceneId': {
+      id: '/_authenticated/projects/$projectId/scene/$sceneId'
+      path: '/scene/$sceneId'
+      fullPath: '/projects/$projectId/scene/$sceneId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/shot/$shotId': {
+      id: '/_authenticated/projects/$projectId/shot/$shotId'
+      path: '/shot/$shotId'
+      fullPath: '/projects/$projectId/shot/$shotId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
   }
 }
 
+interface AuthenticatedProjectsProjectIdRouteChildren {
+  AuthenticatedProjectsProjectIdCastRoute: typeof AuthenticatedProjectsProjectIdCastRoute
+  AuthenticatedProjectsProjectIdElementsRoute: typeof AuthenticatedProjectsProjectIdElementsRoute
+  AuthenticatedProjectsProjectIdGenerationsRoute: typeof AuthenticatedProjectsProjectIdGenerationsRoute
+  AuthenticatedProjectsProjectIdLocationsRoute: typeof AuthenticatedProjectsProjectIdLocationsRoute
+  AuthenticatedProjectsProjectIdLooksRoute: typeof AuthenticatedProjectsProjectIdLooksRoute
+  AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
+  AuthenticatedProjectsProjectIdSceneSceneIdRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
+  AuthenticatedProjectsProjectIdShotShotIdRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRoute
+}
+
+const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
+  {
+    AuthenticatedProjectsProjectIdCastRoute:
+      AuthenticatedProjectsProjectIdCastRoute,
+    AuthenticatedProjectsProjectIdElementsRoute:
+      AuthenticatedProjectsProjectIdElementsRoute,
+    AuthenticatedProjectsProjectIdGenerationsRoute:
+      AuthenticatedProjectsProjectIdGenerationsRoute,
+    AuthenticatedProjectsProjectIdLocationsRoute:
+      AuthenticatedProjectsProjectIdLocationsRoute,
+    AuthenticatedProjectsProjectIdLooksRoute:
+      AuthenticatedProjectsProjectIdLooksRoute,
+    AuthenticatedProjectsProjectIdIndexRoute:
+      AuthenticatedProjectsProjectIdIndexRoute,
+    AuthenticatedProjectsProjectIdSceneSceneIdRoute:
+      AuthenticatedProjectsProjectIdSceneSceneIdRoute,
+    AuthenticatedProjectsProjectIdShotShotIdRoute:
+      AuthenticatedProjectsProjectIdShotShotIdRoute,
+  }
+
+const AuthenticatedProjectsProjectIdRouteWithChildren =
+  AuthenticatedProjectsProjectIdRoute._addFileChildren(
+    AuthenticatedProjectsProjectIdRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRouteWithChildren
+  AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedProjectsProjectIdRoute:
+    AuthenticatedProjectsProjectIdRouteWithChildren,
+  AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
