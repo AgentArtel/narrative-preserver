@@ -1,0 +1,202 @@
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { StatusBadge, SectionLabel } from "@/components/sf/primitives";
+import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
+  component: ProjectHome,
+});
+
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <div className="label-caps">{label}</div>
+      <div className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function ProjectHome() {
+  const { projectId } = useParams({ from: "/_authenticated/projects/$projectId/" });
+
+  const { data } = useQuery({
+    queryKey: ["project-home", projectId],
+    queryFn: async () => {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single();
+      const { data: sequences } = await supabase
+        .from("sequences")
+        .select("*, scenes(*)")
+        .eq("project_id", projectId)
+        .order("sort_order");
+      const sceneIds = (sequences ?? []).flatMap((s) => (s.scenes ?? []).map((sc) => sc.id));
+      const { data: shots } = sceneIds.length
+        ? await supabase
+            .from("shots")
+            .select("id, shot_number, status, description, scene_id")
+            .in("scene_id", sceneIds)
+        : { data: [] };
+      const [{ count: cast }, { count: locs }, { count: els }, { count: canon }] =
+        await Promise.all([
+          supabase
+            .from("characters")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", projectId),
+          supabase
+            .from("locations")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", projectId),
+          supabase
+            .from("elements")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", projectId),
+          supabase
+            .from("canon_records")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", projectId),
+        ]);
+      const shotIds = (shots ?? []).map((s) => s.id);
+      const { data: generations } = shotIds.length
+        ? await supabase
+            .from("generations")
+            .select("*, shots(shot_number)")
+            .in("shot_id", shotIds)
+            .order("created_at", { ascending: false })
+            .limit(6)
+        : { data: [] };
+      return {
+        project,
+        sequences: sequences ?? [],
+        shots: shots ?? [],
+        counts: {
+          scenes: sceneIds.length,
+          shots: (shots ?? []).length,
+          cast: cast ?? 0,
+          locations: locs ?? 0,
+          elements: els ?? 0,
+          canon: canon ?? 0,
+        },
+        generations: generations ?? [],
+      };
+    },
+  });
+
+  const pending = (data?.shots ?? []).filter((s) => s.status === "candidates");
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="text-2xl font-semibold tracking-tight">{data?.project?.title}</h1>
+      {data?.project?.description && (
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{data.project.description}</p>
+      )}
+
+      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-6">
+        <Stat label="Scenes" value={data?.counts.scenes ?? 0} />
+        <Stat label="Shots" value={data?.counts.shots ?? 0} />
+        <Stat label="Cast" value={data?.counts.cast ?? 0} />
+        <Stat label="Locations" value={data?.counts.locations ?? 0} />
+        <Stat label="Elements" value={data?.counts.elements ?? 0} />
+        <Stat label="Canon" value={data?.counts.canon ?? 0} />
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        <section className="lg:col-span-2">
+          <SectionLabel>Sequences &amp; scenes</SectionLabel>
+          <div className="space-y-4">
+            {(data?.sequences ?? []).map((seq) => (
+              <div key={seq.id} className="rounded-lg border border-border bg-surface">
+                <div className="border-b border-border px-4 py-2.5 text-sm font-semibold">
+                  {seq.title}
+                </div>
+                <div className="divide-y divide-border">
+                  {(seq.scenes ?? []).map((sc) => (
+                    <Link
+                      key={sc.id}
+                      to="/projects/$projectId/scene/$sceneId"
+                      params={{ projectId, sceneId: sc.id }}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-raised"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{sc.title}</div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {
+                            (data?.shots ?? []).filter((s) => s.scene_id === sc.id).length
+                          }{" "}
+                          shots · {sc.status}
+                        </div>
+                      </div>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                  {(seq.scenes ?? []).length === 0 && (
+                    <p className="px-4 py-3 text-sm text-muted-foreground">No scenes yet.</p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {(data?.sequences ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No sequences yet.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <div>
+            <SectionLabel>Pending approvals</SectionLabel>
+            <div className="space-y-2">
+              {pending.map((s) => (
+                <Link
+                  key={s.id}
+                  to="/projects/$projectId/shot/$shotId"
+                  params={{ projectId, shotId: s.id }}
+                  className="block rounded border border-border bg-surface p-3 transition-colors hover:border-primary/60"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-primary">{s.shot_number}</span>
+                    <StatusBadge status={s.status} />
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+                    {s.description}
+                  </p>
+                </Link>
+              ))}
+              {pending.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nothing waiting on a decision.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <SectionLabel>Recent generations</SectionLabel>
+            <div className="space-y-2">
+              {(data?.generations ?? []).map((g) => (
+                <div key={g.id} className="rounded border border-border bg-surface p-3 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-primary">{g.shots?.shot_number}</span>
+                    <span className="label-caps">{g.status}</span>
+                  </div>
+                  <div className="mt-1 text-muted-foreground">
+                    {g.provider} · {g.tool ?? "—"} · {new Date(g.created_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+              {(data?.generations ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">No handoffs recorded yet.</p>
+              )}
+            </div>
+            <Button asChild variant="outline" size="sm" className="mt-3">
+              <Link to="/projects/$projectId/generations" params={{ projectId }}>
+                View all generations
+              </Link>
+            </Button>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
