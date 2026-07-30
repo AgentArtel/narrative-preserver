@@ -53,6 +53,27 @@ export async function buildGenerationPackage(shotId: string): Promise<BuiltPacka
     supabase.from("reference_links").select("*, asset_references(*)").eq("owner_id", shotId),
   ]);
 
+  const charIds = (shotChars ?? []).map((sc) => sc.character_id);
+  const elIds = (shotEls ?? []).map((se) => se.element_id);
+  const nameById = new Map<string, string>();
+  for (const sc of shotChars ?? []) if (sc.characters) nameById.set(sc.character_id, sc.characters.name);
+  for (const se of shotEls ?? []) if (se.elements) nameById.set(se.element_id, se.elements.name);
+  if (shot.location_id && location) nameById.set(shot.location_id, location.name);
+
+  const assetOwnerIds = [
+    ...charIds,
+    ...elIds,
+    ...(shot.location_id ? [shot.location_id] : []),
+  ];
+  const { data: assetLinks } = assetOwnerIds.length
+    ? await supabase
+        .from("reference_links")
+        .select("*, asset_references(*)")
+        .in("owner_type", ["characters", "locations", "elements"])
+        .in("owner_id", assetOwnerIds)
+    : { data: [] };
+
+
   const canonFor = (type: string, id: string) =>
     (canon ?? []).filter((c) => c.subject_type === type && c.subject_id === id);
 
@@ -155,18 +176,43 @@ export async function buildGenerationPackage(shotId: string): Promise<BuiltPacka
     );
   }
 
+  const shotCanon = canonFor("shot", shot.id);
+  if (shotCanon.length) {
+    lines.push(
+      block(
+        "SHOT CANON",
+        shotCanon.map((r) => `${r.aspect}: ${r.description ?? ""}`),
+      ),
+    );
+  }
+
   const refs = (refLinks ?? [])
     .map((l) => l.asset_references?.image_url)
     .filter(Boolean) as string[];
+
+  const assetRefLines: string[] = [];
+  const perAsset = new Map<string, number>();
+  const assetRefs: string[] = [];
+  for (const l of assetLinks ?? []) {
+    const url = l.asset_references?.image_url;
+    if (!url) continue;
+    const name = nameById.get(l.owner_id) ?? "Asset";
+    const n = (perAsset.get(name) ?? 0) + 1;
+    perAsset.set(name, n);
+    assetRefLines.push(`${name} reference ${n}: ${url}`);
+    assetRefs.push(url);
+  }
 
   lines.push(
     block("REFERENCES", [
       prevApproved
         ? `Previous approved frame (shot ${prev?.shot_number}): ${prevApproved}`
         : "Previous approved frame: none",
-      ...refs.map((u, i) => `Reference ${i + 1}: ${u}`),
+      ...assetRefLines,
+      ...refs.map((u, i) => `Shot reference ${i + 1}: ${u}`),
     ]),
   );
+
 
   const negatives = look?.negative_constraints ?? [];
   lines.push(block("NEGATIVE CONSTRAINTS", negatives.length ? negatives : ["—"]));
@@ -182,7 +228,7 @@ export async function buildGenerationPackage(shotId: string): Promise<BuiltPacka
       look: look?.name ?? null,
       palette: palette.map((p) => p.hex),
       previous_approved_frame: prevApproved ?? null,
-      reference_images: refs,
+      reference_images: [...assetRefs, ...refs],
       canon_records_applied: (canon ?? []).length,
     },
   };

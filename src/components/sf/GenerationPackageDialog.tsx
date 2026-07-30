@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { buildGenerationPackage, type BuiltPackage } from "@/lib/generation-package";
-import { uploadImage } from "@/lib/upload";
+import { importGenerationResults } from "@/lib/import-results";
+
 import { toast } from "sonner";
 import { Copy, Check, Upload } from "lucide-react";
 
@@ -69,21 +70,7 @@ export function GenerationPackageDialog({
     if (!files?.length || !generationId) return;
     setUploading(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
-      for (const file of Array.from(files)) {
-        const url = await uploadImage(file);
-        const { error } = await supabase.from("frames").insert({
-          user_id: u.user!.id,
-          shot_id: shotId,
-          image_url: url,
-          kind: "keyframe",
-          is_approved: false,
-          notes: `Imported from generation ${generationId.slice(0, 8)}`,
-        });
-        if (error) throw error;
-      }
-      await supabase.from("generations").update({ status: "imported" }).eq("id", generationId);
-      await supabase.from("shots").update({ status: "candidates" }).eq("id", shotId);
+      await importGenerationResults({ shotId, generationId, files });
       qc.invalidateQueries();
       toast.success("Candidates imported");
       onOpenChange(false);
@@ -94,6 +81,7 @@ export function GenerationPackageDialog({
       setUploading(false);
     }
   }
+
 
   function reset() {
     setPkg(null);

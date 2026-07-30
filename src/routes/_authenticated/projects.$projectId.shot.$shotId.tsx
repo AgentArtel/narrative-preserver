@@ -7,6 +7,7 @@ import { Chip, SectionLabel, StatusBadge, CanonMarker } from "@/components/sf/pr
 import { GenerationPackageDialog } from "@/components/sf/GenerationPackageDialog";
 import { PromoteToCanonDialog } from "@/components/sf/PromoteToCanonDialog";
 import { uploadImage } from "@/lib/upload";
+import { importGenerationResults } from "@/lib/import-results";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Check, Package, Sparkles, Upload } from "lucide-react";
@@ -33,6 +34,7 @@ function ShotDetail() {
   const [pkgOpen, setPkgOpen] = useState(false);
   const [canonFrame, setCanonFrame] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [importingId, setImportingId] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["shot-detail", shotId],
@@ -79,10 +81,27 @@ function ShotDetail() {
     await supabase.from("frames").update({ is_approved: false }).eq("shot_id", shotId);
     const { error } = await supabase.from("frames").update({ is_approved: true }).eq("id", frameId);
     if (error) return toast.error(error.message);
-    await supabase.from("shots").update({ status: "approved" }).eq("id", shotId);
+    if (shot?.status !== "final") {
+      await supabase.from("shots").update({ status: "approved" }).eq("id", shotId);
+    }
     qc.invalidateQueries();
     toast.success("Frame approved — this is now a production decision");
   }
+
+  async function importForGeneration(generationId: string, files: FileList | null) {
+    if (!files?.length) return;
+    setImportingId(generationId);
+    try {
+      await importGenerationResults({ shotId, generationId, files });
+      qc.invalidateQueries();
+      toast.success("Result imported as candidates");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImportingId(null);
+    }
+  }
+
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -305,7 +324,23 @@ function ShotDetail() {
                   <div className="mt-1 text-muted-foreground">
                     {new Date(g.created_at).toLocaleString()}
                   </div>
+                  {g.status === "handed_off" && (
+                    <label className="mt-2 inline-flex">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => importForGeneration(g.id, e.target.files)}
+                      />
+                      <span className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-input px-2.5 text-xs font-medium hover:bg-surface-raised">
+                        <Upload className="size-3.5" />
+                        {importingId === g.id ? "Importing…" : "Import result"}
+                      </span>
+                    </label>
+                  )}
                 </div>
+
               ))}
               {(data?.generations ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">No handoffs yet.</p>

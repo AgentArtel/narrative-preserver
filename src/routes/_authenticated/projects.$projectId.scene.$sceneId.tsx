@@ -50,6 +50,13 @@ function SceneWorkspace() {
   const [showRight, setShowRight] = useState(true);
   const [pkgOpen, setPkgOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [beatText, setBeatText] = useState("");
+  const [fields, setFields] = useState<{
+    description: string;
+    dialogue: string;
+    duration: string;
+    camera: Camera;
+  }>({ description: "", dialogue: "", duration: "", camera: {} });
 
   const { data: tree } = useQuery({
     queryKey: ["scene-tree", projectId],
@@ -119,10 +126,43 @@ function SceneWorkspace() {
     [shots, selectedShotId],
   );
 
+  useEffect(() => {
+    if (!selectedShotId) return;
+    const s = (shots ?? []).find((x) => x.id === selectedShotId);
+    setFields({
+      description: s?.description ?? "",
+      dialogue: s?.dialogue ?? "",
+      duration: s?.duration_seconds != null ? String(s.duration_seconds) : "",
+      camera: (s?.camera ?? {}) as Camera,
+    });
+    // Reset local field state only when the selected shot changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedShotId]);
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["shots", sceneId] });
     qc.invalidateQueries({ queryKey: ["project-home", projectId] });
   };
+
+  const addBeat = useMutation({
+    mutationFn: async (description: string) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("beats").insert({
+        user_id: u.user!.id,
+        scene_id: sceneId,
+        description,
+        sort_order: scene?.beats?.length ?? 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setBeatText("");
+      qc.invalidateQueries({ queryKey: ["scene", sceneId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
 
   const addShot = useMutation({
     mutationFn: async (afterSort?: number) => {
@@ -273,7 +313,7 @@ function SceneWorkspace() {
     invalidate();
   }
 
-  const camera = (selected?.camera ?? {}) as Camera;
+  
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
@@ -329,7 +369,25 @@ function SceneWorkspace() {
                   </li>
                 ))}
             </ol>
+            <form
+              className="mt-2 flex gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (beatText.trim()) addBeat.mutate(beatText.trim());
+              }}
+            >
+              <Input
+                className="h-8 text-xs"
+                placeholder="Add beat…"
+                value={beatText}
+                onChange={(e) => setBeatText(e.target.value)}
+              />
+              <Button type="submit" size="sm" variant="outline" disabled={!beatText.trim()}>
+                <Plus className="size-3.5" />
+              </Button>
+            </form>
           </div>
+
 
           <div className="mt-6 border-t border-border pt-4">
             <SectionLabel>Shots</SectionLabel>
@@ -474,17 +532,22 @@ function SceneWorkspace() {
               <div className="space-y-2">
                 <SectionLabel>Shot</SectionLabel>
                 <Textarea
-                  value={selected.description ?? ""}
-                  onChange={(e) =>
-                    patchShot.mutate({ id: selected.id, patch: { description: e.target.value } })
+                  value={fields.description}
+                  onChange={(e) => setFields((f) => ({ ...f, description: e.target.value }))}
+                  onBlur={() =>
+                    patchShot.mutate({
+                      id: selected.id,
+                      patch: { description: fields.description },
+                    })
                   }
                   rows={3}
                 />
                 <Textarea
                   placeholder="Dialogue"
-                  value={selected.dialogue ?? ""}
-                  onChange={(e) =>
-                    patchShot.mutate({ id: selected.id, patch: { dialogue: e.target.value } })
+                  value={fields.dialogue}
+                  onChange={(e) => setFields((f) => ({ ...f, dialogue: e.target.value }))}
+                  onBlur={() =>
+                    patchShot.mutate({ id: selected.id, patch: { dialogue: fields.dialogue } })
                   }
                   rows={2}
                 />
@@ -492,14 +555,18 @@ function SceneWorkspace() {
                   <Input
                     type="number"
                     placeholder="Seconds"
-                    value={selected.duration_seconds ?? ""}
-                    onChange={(e) =>
+                    value={fields.duration}
+                    onChange={(e) => setFields((f) => ({ ...f, duration: e.target.value }))}
+                    onBlur={() =>
                       patchShot.mutate({
                         id: selected.id,
-                        patch: { duration_seconds: e.target.value ? Number(e.target.value) : null },
+                        patch: {
+                          duration_seconds: fields.duration ? Number(fields.duration) : null,
+                        },
                       })
                     }
                   />
+
                   <Select
                     value={selected.status}
                     onValueChange={(v) =>
@@ -527,14 +594,18 @@ function SceneWorkspace() {
                     <Label className="text-xs text-muted-foreground">{f.label}</Label>
                     <Input
                       placeholder={f.placeholder}
-                      value={camera[f.key] ?? ""}
+                      value={fields.camera[f.key] ?? ""}
                       onChange={(e) =>
-                        patchShot.mutate({
-                          id: selected.id,
-                          patch: { camera: { ...camera, [f.key]: e.target.value } },
-                        })
+                        setFields((s) => ({
+                          ...s,
+                          camera: { ...s.camera, [f.key]: e.target.value },
+                        }))
+                      }
+                      onBlur={() =>
+                        patchShot.mutate({ id: selected.id, patch: { camera: fields.camera } })
                       }
                     />
+
                   </div>
                 ))}
               </div>

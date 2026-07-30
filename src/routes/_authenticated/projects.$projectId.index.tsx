@@ -1,9 +1,22 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge, SectionLabel } from "@/components/sf/primitives";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { ChevronRight, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   head: () => ({
@@ -34,6 +47,15 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 
 function ProjectHome() {
   const { projectId } = useParams({ from: "/_authenticated/projects/$projectId/" });
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [seqOpen, setSeqOpen] = useState(false);
+  const [seqTitle, setSeqTitle] = useState("");
+  const [sceneFor, setSceneFor] = useState<string | null>(null);
+  const [sceneTitle, setSceneTitle] = useState("");
+  const [sceneBrief, setSceneBrief] = useState("");
+
+
 
   const { data } = useQuery({
     queryKey: ["project-home", projectId],
@@ -102,6 +124,61 @@ function ProjectHome() {
 
   const pending = (data?.shots ?? []).filter((s) => s.status === "candidates");
 
+  const createSequence = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("sequences").insert({
+        user_id: u.user!.id,
+        project_id: projectId,
+        title: seqTitle.trim(),
+        sort_order: data?.sequences?.length ?? 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSeqOpen(false);
+      setSeqTitle("");
+      qc.invalidateQueries({ queryKey: ["project-home", projectId] });
+      qc.invalidateQueries({ queryKey: ["scene-tree", projectId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createScene = useMutation({
+    mutationFn: async () => {
+      const seq = (data?.sequences ?? []).find((s) => s.id === sceneFor);
+      const { data: u } = await supabase.auth.getUser();
+      const { data: row, error } = await supabase
+        .from("scenes")
+        .insert({
+          user_id: u.user!.id,
+          sequence_id: sceneFor!,
+          title: sceneTitle.trim(),
+          brief: sceneBrief || null,
+          status: "drafting",
+          sort_order: seq?.scenes?.length ?? 0,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return row;
+    },
+    onSuccess: (row) => {
+      setSceneFor(null);
+      setSceneTitle("");
+      setSceneBrief("");
+      qc.invalidateQueries({ queryKey: ["project-home", projectId] });
+      qc.invalidateQueries({ queryKey: ["scene-tree", projectId] });
+      navigate({
+        to: "/projects/$projectId/scene/$sceneId",
+        params: { projectId, sceneId: row.id },
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">{data?.project?.title}</h1>
@@ -120,13 +197,22 @@ function ProjectHome() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
-          <SectionLabel>Sequences &amp; scenes</SectionLabel>
+          <div className="flex items-center justify-between gap-3">
+            <SectionLabel>Sequences &amp; scenes</SectionLabel>
+            <Button size="sm" variant="outline" className="mb-2" onClick={() => setSeqOpen(true)}>
+              <Plus className="size-4" /> New sequence
+            </Button>
+          </div>
           <div className="space-y-4">
             {(data?.sequences ?? []).map((seq) => (
               <div key={seq.id} className="rounded-lg border border-border bg-surface">
-                <div className="border-b border-border px-4 py-2.5 text-sm font-semibold">
-                  {seq.title}
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+                  <span className="text-sm font-semibold">{seq.title}</span>
+                  <Button size="sm" variant="ghost" onClick={() => setSceneFor(seq.id)}>
+                    <Plus className="size-3.5" /> New scene
+                  </Button>
                 </div>
+
                 <div className="divide-y divide-border">
                   {(seq.scenes ?? []).map((sc) => (
                     <Link
@@ -211,6 +297,74 @@ function ProjectHome() {
           </div>
         </section>
       </div>
+
+      <Dialog open={seqOpen} onOpenChange={setSeqOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New sequence</DialogTitle>
+            <DialogDescription>
+              A sequence groups the scenes of one continuous stretch of the story.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="seq-title">Title</Label>
+            <Input
+              id="seq-title"
+              value={seqTitle}
+              onChange={(e) => setSeqTitle(e.target.value)}
+              placeholder="Opening Cinematic"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => createSequence.mutate()}
+              disabled={!seqTitle.trim() || createSequence.isPending}
+            >
+              Create sequence
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!sceneFor} onOpenChange={(v) => !v && setSceneFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New scene</DialogTitle>
+            <DialogDescription>
+              A scene holds beats and shots. You will land in its workspace after creating it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="scene-title">Title</Label>
+              <Input
+                id="scene-title"
+                value={sceneTitle}
+                onChange={(e) => setSceneTitle(e.target.value)}
+                placeholder="The hero enters the ruined cathedral"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="scene-brief">Brief</Label>
+              <Textarea
+                id="scene-brief"
+                value={sceneBrief}
+                onChange={(e) => setSceneBrief(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => createScene.mutate()}
+              disabled={!sceneTitle.trim() || createScene.isPending}
+            >
+              Create scene
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
+
   );
 }
