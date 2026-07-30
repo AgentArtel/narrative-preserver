@@ -594,14 +594,18 @@ function SceneWorkspace() {
                     <Label className="text-xs text-muted-foreground">{f.label}</Label>
                     <Input
                       placeholder={f.placeholder}
-                      value={camera[f.key] ?? ""}
+                      value={fields.camera[f.key] ?? ""}
                       onChange={(e) =>
-                        patchShot.mutate({
-                          id: selected.id,
-                          patch: { camera: { ...camera, [f.key]: e.target.value } },
-                        })
+                        setFields((s) => ({
+                          ...s,
+                          camera: { ...s.camera, [f.key]: e.target.value },
+                        }))
+                      }
+                      onBlur={() =>
+                        patchShot.mutate({ id: selected.id, patch: { camera: fields.camera } })
                       }
                     />
+
                   </div>
                 ))}
               </div>
