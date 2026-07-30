@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Sparkles, LogOut } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/projects")({
+export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
 });
 
