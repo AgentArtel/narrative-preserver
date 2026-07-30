@@ -88,10 +88,17 @@ function ProjectsPage() {
         <Link to="/" className="label-caps hover:text-foreground">
           StoryForge
         </Link>
-        <Button variant="ghost" size="sm" onClick={signOut}>
-          <LogOut className="size-4" /> Sign out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setMcpOpen(true)}>
+            <Plug className="size-4" /> MCP access
+          </Button>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="size-4" /> Sign out
+          </Button>
+        </div>
       </header>
+      <McpAccessDialog open={mcpOpen} onOpenChange={setMcpOpen} />
+
 
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
