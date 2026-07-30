@@ -50,6 +50,13 @@ function SceneWorkspace() {
   const [showRight, setShowRight] = useState(true);
   const [pkgOpen, setPkgOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [beatText, setBeatText] = useState("");
+  const [fields, setFields] = useState<{
+    description: string;
+    dialogue: string;
+    duration: string;
+    camera: Camera;
+  }>({ description: "", dialogue: "", duration: "", camera: {} });
 
   const { data: tree } = useQuery({
     queryKey: ["scene-tree", projectId],
