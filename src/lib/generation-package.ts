@@ -176,18 +176,43 @@ export async function buildGenerationPackage(shotId: string): Promise<BuiltPacka
     );
   }
 
+  const shotCanon = canonFor("shot", shot.id);
+  if (shotCanon.length) {
+    lines.push(
+      block(
+        "SHOT CANON",
+        shotCanon.map((r) => `${r.aspect}: ${r.description ?? ""}`),
+      ),
+    );
+  }
+
   const refs = (refLinks ?? [])
     .map((l) => l.asset_references?.image_url)
     .filter(Boolean) as string[];
+
+  const assetRefLines: string[] = [];
+  const perAsset = new Map<string, number>();
+  const assetRefs: string[] = [];
+  for (const l of assetLinks ?? []) {
+    const url = l.asset_references?.image_url;
+    if (!url) continue;
+    const name = nameById.get(l.owner_id) ?? "Asset";
+    const n = (perAsset.get(name) ?? 0) + 1;
+    perAsset.set(name, n);
+    assetRefLines.push(`${name} reference ${n}: ${url}`);
+    assetRefs.push(url);
+  }
 
   lines.push(
     block("REFERENCES", [
       prevApproved
         ? `Previous approved frame (shot ${prev?.shot_number}): ${prevApproved}`
         : "Previous approved frame: none",
-      ...refs.map((u, i) => `Reference ${i + 1}: ${u}`),
+      ...assetRefLines,
+      ...refs.map((u, i) => `Shot reference ${i + 1}: ${u}`),
     ]),
   );
+
 
   const negatives = look?.negative_constraints ?? [];
   lines.push(block("NEGATIVE CONSTRAINTS", negatives.length ? negatives : ["—"]));
