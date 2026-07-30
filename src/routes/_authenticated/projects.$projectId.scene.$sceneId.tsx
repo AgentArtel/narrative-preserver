@@ -180,7 +180,7 @@ function SceneWorkspace() {
 
   const patchShot = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
-      const { error } = await supabase.from("shots").update(patch).eq("id", id);
+      const { error } = await supabase.from("shots").update(patch as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -248,11 +248,20 @@ function SceneWorkspace() {
       const [k, ...rest] = part.split(":");
       if (k?.trim() && rest.length) state[k.trim()] = rest.join(":").trim();
     }
-    await supabase
-      .from(table)
-      .update({ state })
-      .eq("shot_id", selected!.id)
-      .eq(key, id);
+    if (table === "shot_characters") {
+      await supabase
+        .from("shot_characters")
+        .update({ state })
+        .eq("shot_id", selected!.id)
+        .eq("character_id", id);
+    } else {
+      await supabase
+        .from("shot_elements")
+        .update({ state })
+        .eq("shot_id", selected!.id)
+        .eq("element_id", id);
+    }
+    void key;
     invalidate();
   }
 

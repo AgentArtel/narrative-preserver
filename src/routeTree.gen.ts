@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
+import { Route as AuthenticatedProjectsProjectIdSceneSceneIdRouteImport } from './routes/_authenticated/projects.$projectId.scene.$sceneId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -48,6 +49,12 @@ const AuthenticatedProjectsProjectIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdSceneSceneIdRoute =
+  AuthenticatedProjectsProjectIdSceneSceneIdRouteImport.update({
+    id: '/scene/$sceneId',
+    path: '/scene/$sceneId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -55,12 +62,14 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,6 +79,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -79,8 +89,14 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/'
     | '/projects/$projectId/'
+    | '/projects/$projectId/scene/$sceneId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/projects' | '/projects/$projectId'
+  to:
+    | '/'
+    | '/auth'
+    | '/projects'
+    | '/projects/$projectId'
+    | '/projects/$projectId/scene/$sceneId'
   id:
     | '__root__'
     | '/'
@@ -89,6 +105,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId'
     | '/_authenticated/projects/'
     | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/scene/$sceneId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -141,17 +158,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/scene/$sceneId': {
+      id: '/_authenticated/projects/$projectId/scene/$sceneId'
+      path: '/scene/$sceneId'
+      fullPath: '/projects/$projectId/scene/$sceneId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
   }
 }
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
+  AuthenticatedProjectsProjectIdSceneSceneIdRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
 }
 
 const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
   {
     AuthenticatedProjectsProjectIdIndexRoute:
       AuthenticatedProjectsProjectIdIndexRoute,
+    AuthenticatedProjectsProjectIdSceneSceneIdRoute:
+      AuthenticatedProjectsProjectIdSceneSceneIdRoute,
   }
 
 const AuthenticatedProjectsProjectIdRouteWithChildren =
