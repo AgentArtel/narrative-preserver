@@ -47,6 +47,15 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 
 function ProjectHome() {
   const { projectId } = useParams({ from: "/_authenticated/projects/$projectId/" });
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [seqOpen, setSeqOpen] = useState(false);
+  const [seqTitle, setSeqTitle] = useState("");
+  const [sceneFor, setSceneFor] = useState<string | null>(null);
+  const [sceneTitle, setSceneTitle] = useState("");
+  const [sceneBrief, setSceneBrief] = useState("");
+
+
 
   const { data } = useQuery({
     queryKey: ["project-home", projectId],
