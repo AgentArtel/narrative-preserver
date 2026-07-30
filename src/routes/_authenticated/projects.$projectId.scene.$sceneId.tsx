@@ -126,10 +126,43 @@ function SceneWorkspace() {
     [shots, selectedShotId],
   );
 
+  useEffect(() => {
+    if (!selectedShotId) return;
+    const s = (shots ?? []).find((x) => x.id === selectedShotId);
+    setFields({
+      description: s?.description ?? "",
+      dialogue: s?.dialogue ?? "",
+      duration: s?.duration_seconds != null ? String(s.duration_seconds) : "",
+      camera: (s?.camera ?? {}) as Camera,
+    });
+    // Reset local field state only when the selected shot changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedShotId]);
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["shots", sceneId] });
     qc.invalidateQueries({ queryKey: ["project-home", projectId] });
   };
+
+  const addBeat = useMutation({
+    mutationFn: async (description: string) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("beats").insert({
+        user_id: u.user!.id,
+        scene_id: sceneId,
+        description,
+        sort_order: scene?.beats?.length ?? 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setBeatText("");
+      qc.invalidateQueries({ queryKey: ["scene", sceneId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
 
   const addShot = useMutation({
     mutationFn: async (afterSort?: number) => {
