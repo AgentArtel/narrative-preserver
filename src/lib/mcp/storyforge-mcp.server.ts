@@ -291,6 +291,57 @@ export const TOOLS: Tool[] = [
       return data;
     },
   },
+  {
+    name: "get_locks",
+    description:
+      "Read the three project locks (style lock, continuity, direction) that are emitted verbatim at the top of every generation package.",
+    inputSchema: schema({ project_id: S.string }, ["project_id"]),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      return own(
+        ctx,
+        "projects",
+        projectId,
+        "id, style_lock, continuity, direction, locks_frozen_at",
+      );
+    },
+  },
+  {
+    name: "set_locks",
+    description:
+      "Set one or more project locks. These are re-emitted byte-identically in every prompt; editing them changes every future prompt in the project, and frames approved earlier were made under the previous locks. Pass freeze: true to stamp locks_frozen_at.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        style_lock: S.string,
+        continuity: S.string,
+        direction: S.string,
+        freeze: { type: "boolean" },
+      },
+      ["project_id"],
+    ),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      await own(ctx, "projects", projectId);
+      const patch: Record<string, unknown> = {};
+      for (const f of LOCK_FIELDS) {
+        if (typeof a[f.key] === "string") patch[f.key] = a[f.key];
+      }
+      if (a.freeze === true) patch.locks_frozen_at = new Date().toISOString();
+      if (!Object.keys(patch).length) throw new Error("No lock fields supplied");
+      const { data, error } = await ctx.db
+        .from("projects")
+        .update(patch as never)
+        .eq("id", projectId)
+        .eq("user_id", ctx.userId)
+        .select("id, style_lock, continuity, direction, locks_frozen_at")
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  },
+
+
 
   /* ---------------------------------------------------------- assets */
   {
