@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { Chip, SectionLabel } from "@/components/sf/primitives";
 import { LocationGeography } from "@/components/sf/LocationGeography";
+import {
+  LocationLockChips,
+  LocationLocks,
+  type LocationLockRow,
+} from "@/components/sf/LocationLocks";
+
 
 import { uploadImage } from "@/lib/upload";
 import { toast } from "sonner";
@@ -150,6 +156,13 @@ export function LibraryPage({
                 <div className="label-caps mt-0.5">{r.role ?? r.element_type}</div>
               )}
               <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{r.description}</p>
+              {table === "locations" && (
+                <LocationLockChips
+                  className="mt-2"
+                  location={r as unknown as LocationLockRow}
+                />
+              )}
+
             </button>
           ))}
           {(data?.rows ?? []).length === 0 && (
