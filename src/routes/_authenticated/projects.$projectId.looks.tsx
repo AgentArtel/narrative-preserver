@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SectionLabel } from "@/components/sf/primitives";
-import { asPalette } from "@/lib/storyforge";
+import { asPalette, STYLE_LOOK_BOUNDARY } from "@/lib/storyforge";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
