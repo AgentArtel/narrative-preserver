@@ -613,10 +613,24 @@ function SceneWorkspace() {
                         patchShot.mutate({ id: selected.id, patch: { camera: fields.camera } })
                       }
                     />
-
+                    {f.key === "movement" &&
+                      cameraMoveWarnings(fields.camera.movement, vocab?.moves ?? []).map((w) => (
+                        <p key={w} className="flex gap-1.5 text-[11px] text-primary">
+                          <AlertTriangle className="mt-px size-3.5 shrink-0" />
+                          {w}
+                        </p>
+                      ))}
                   </div>
                 ))}
               </div>
+
+              <ShotRiskTail
+                shotId={selected.id}
+                riskTail={selected.risk_tail}
+                classes={vocab?.classes ?? []}
+              />
+
+
 
               <div className="space-y-2">
                 <SectionLabel>Cast in shot</SectionLabel>
