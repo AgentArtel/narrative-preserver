@@ -563,7 +563,7 @@
       {
         "name": "create_shot",
         "title": "create_shot",
-        "description": "Create a shot in a scene, appended at the end with status 'idea'.",
+        "description": "Create a shot in a scene, appended at the end with status 'idea'. camera.movement should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -605,6 +605,33 @@
             },
             "look_id": {
               "type": "string"
+            },
+            "risk_tail": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "risk_class": {
+                    "type": "string"
+                  },
+                  "prediction": {
+                    "type": "string"
+                  },
+                  "fallback": {
+                    "type": "string"
+                  },
+                  "occurred": {
+                    "type": "string",
+                    "enum": [
+                      "yes",
+                      "no"
+                    ]
+                  }
+                },
+                "required": [
+                  "risk_class"
+                ]
+              }
             }
           },
           "required": [
@@ -617,7 +644,7 @@
       {
         "name": "update_shot",
         "title": "update_shot",
-        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number.",
+        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",

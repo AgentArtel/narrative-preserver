@@ -744,7 +744,8 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "create_shot",
-    description: "Create a shot in a scene, appended at the end with status 'idea'.",
+    description:
+      "Create a shot in a scene, appended at the end with status 'idea'. camera.movement should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
     inputSchema: schema(
       {
         scene_id: S.string,
@@ -757,6 +758,20 @@ export const TOOLS: Tool[] = [
         location_id: S.string,
         location_state: S.object,
         look_id: S.string,
+        risk_tail: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              risk_class: S.string,
+              prediction: S.string,
+              fallback: S.string,
+              occurred: { type: "string", enum: ["yes", "no"] },
+            },
+            required: ["risk_class"],
+            additionalProperties: false,
+          },
+        },
       },
       ["scene_id", "description"],
     ),
@@ -784,18 +799,19 @@ export const TOOLS: Tool[] = [
           location_id: locationId,
           location_state: optObj(a, "location_state") ?? {},
           look_id: lookId,
+          risk_tail: a.risk_tail === undefined ? [] : asRiskTail(a.risk_tail),
           status: "idea",
           sort_order: order,
         },
         "id",
       );
-      return { shot_id: row.id };
+      return { shot_id: row.id, warnings: await shotCraftWarnings(ctx, row.id as string) };
     },
   },
   {
     name: "update_shot",
     description:
-      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number.",
+      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
     inputSchema: schema({ shot_id: S.string, patch: S.object }, ["shot_id", "patch"]),
     handler: async (ctx, a) => {
       const shotId = str(a, "shot_id");
@@ -810,6 +826,7 @@ export const TOOLS: Tool[] = [
       if (typeof patch.status === "string") {
         oneOf(patch.status, SHOT_STATUSES as ShotStatus[], "shot status");
       }
+      if (patch.risk_tail !== undefined) patch.risk_tail = asRiskTail(patch.risk_tail);
       if (typeof patch.location_id === "string") await own(ctx, "locations", patch.location_id);
       if (typeof patch.look_id === "string") await own(ctx, "looks", patch.look_id);
       if (typeof patch.beat_id === "string") await own(ctx, "beats", patch.beat_id);
@@ -819,9 +836,14 @@ export const TOOLS: Tool[] = [
         .eq("id", shotId)
         .eq("user_id", ctx.userId);
       if (error) throw new Error(error.message);
-      return { shot_id: shotId, updated: Object.keys(patch) };
+      return {
+        shot_id: shotId,
+        updated: Object.keys(patch),
+        warnings: await shotCraftWarnings(ctx, shotId),
+      };
     },
   },
+
   {
     name: "add_character_to_shot",
     description: "Attach a character to a shot with per-shot state (merged into any existing state).",
