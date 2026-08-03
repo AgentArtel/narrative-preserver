@@ -8,12 +8,10 @@ import { SHOT_STATUSES, FRAME_KINDS, SCREEN_SIDES, asLandmarks, LOCK_FIELDS } fr
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
 import {
   DEPTH_PLANES,
-  GATES,
   KEYFRAME_FORMS,
   asDepthPlanes,
   asRiskTail,
   cameraMoveWarnings,
-  isValidProjectCode,
   keyframeFormWarnings,
   locationLockState,
   mergeVocab,
