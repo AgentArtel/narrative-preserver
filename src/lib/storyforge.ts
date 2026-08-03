@@ -12,6 +12,7 @@ export const SHOT_STATUSES: ShotStatus[] = [
   "generating",
   "candidates",
   "revision",
+  "held_still",
   "approved",
   "final",
 ];
@@ -32,9 +33,15 @@ export const statusColor: Record<ShotStatus, string> = {
   generating: "var(--status-generating)",
   candidates: "var(--status-candidates)",
   revision: "var(--status-revision)",
+  held_still: "var(--status-held-still)",
   approved: "var(--status-approved)",
   final: "var(--status-final)",
 };
+
+/** A real production state: the stills animatic tells you which shots survive as stills. */
+export const HELD_STILL_HINT =
+  "Held still is a production decision, not a failure — the shot ships as a still.";
+
 
 export const CANON_ASPECTS = [
   { key: "character_face", label: "Character face" },
