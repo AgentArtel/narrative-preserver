@@ -20,13 +20,21 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/shot/$
   head: () => ({
     meta: [
       { title: "Shot Detail — StoryForge" },
-      { name: "description", content: "Approve candidate frames, compare options and promote aspects to canon." },
+      {
+        name: "description",
+        content: "Approve candidate frames, compare options and promote aspects to canon.",
+      },
       { property: "og:title", content: "Shot Detail — StoryForge" },
-      { property: "og:description", content: "Approve candidate frames, compare options and promote aspects to canon." },
+      {
+        property: "og:description",
+        content: "Approve candidate frames, compare options and promote aspects to canon.",
+      },
     ],
   }),
   component: ShotDetail,
-  errorComponent: ({ error }) => <div className="p-8 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-8 text-sm text-destructive">{error.message}</div>
+  ),
 });
 
 function ShotDetail() {
@@ -83,7 +91,6 @@ function ShotDetail() {
   const { data: vocab } = useVocabularies(projectId);
   const movement = ((shot?.camera ?? {}) as Camera).movement;
 
-
   async function approveFrame(frameId: string) {
     await supabase.from("frames").update({ is_approved: false }).eq("shot_id", shotId);
     const { error } = await supabase.from("frames").update({ is_approved: true }).eq("id", frameId);
@@ -108,7 +115,6 @@ function ShotDetail() {
       setImportingId(null);
     }
   }
-
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -227,11 +233,7 @@ function ShotDetail() {
                         alt="Compared candidate frame"
                         className="aspect-video w-full rounded object-cover"
                       />
-                      <Button
-                        size="sm"
-                        className="mt-2 w-full"
-                        onClick={() => approveFrame(id)}
-                      >
+                      <Button size="sm" className="mt-2 w-full" onClick={() => approveFrame(id)}>
                         <Check className="size-4" /> Approve this
                       </Button>
                     </div>
@@ -286,15 +288,12 @@ function ShotDetail() {
           </div>
         </section>
 
-
         <aside className="space-y-6">
           <div>
             <SectionLabel>Shot</SectionLabel>
             <div className="space-y-2 rounded-lg border border-border bg-surface p-3 text-sm">
               <p>{shot?.description}</p>
-              {shot?.dialogue && (
-                <p className="text-muted-foreground italic">“{shot.dialogue}”</p>
-              )}
+              {shot?.dialogue && <p className="text-muted-foreground italic">“{shot.dialogue}”</p>}
               <div className="flex flex-wrap gap-1 pt-1">
                 {shot?.shot_characters?.map((sc) => (
                   <Chip key={sc.character_id} tone="accent">
@@ -357,7 +356,6 @@ function ShotDetail() {
                     </label>
                   )}
                 </div>
-
               ))}
               {(data?.generations ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">No handoffs yet.</p>

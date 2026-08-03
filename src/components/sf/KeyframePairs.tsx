@@ -70,7 +70,10 @@ export function KeyframePairs({
   }
 
   async function patchPair(id: string, patch: Record<string, unknown>) {
-    const { error } = await supabase.from("keyframe_pairs").update(patch as never).eq("id", id);
+    const { error } = await supabase
+      .from("keyframe_pairs")
+      .update(patch as never)
+      .eq("id", id);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["keyframe-pairs", shotId] });
   }
@@ -117,7 +120,9 @@ export function KeyframePairs({
                       </div>
                       <Select
                         value={(slot === "a" ? p.a_frame_id : p.b_frame_id) ?? "none"}
-                        onValueChange={(v) => patchPair(p.id, { [column]: v === "none" ? null : v })}
+                        onValueChange={(v) =>
+                          patchPair(p.id, { [column]: v === "none" ? null : v })
+                        }
                       >
                         <SelectTrigger className="mt-1.5 h-8 text-xs">
                           <SelectValue />

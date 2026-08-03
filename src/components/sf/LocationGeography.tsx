@@ -61,7 +61,9 @@ export function LocationGeography({
               placeholder="Landmark name"
               value={l.name}
               onChange={(e) =>
-                setLandmarks((ls) => ls.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))
+                setLandmarks((ls) =>
+                  ls.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)),
+                )
               }
             />
             <Select

@@ -46,7 +46,12 @@ export function VocabularyDialog({
           }
         : { guidance: (row as RiskClassRow).guidance };
     const error = row.project_id
-      ? (await supabase.from(table).update(patch as never).eq("id", row.id)).error
+      ? (
+          await supabase
+            .from(table)
+            .update(patch as never)
+            .eq("id", row.id)
+        ).error
       : (
           await supabase.from(table).insert({
             user_id: u.user!.id,

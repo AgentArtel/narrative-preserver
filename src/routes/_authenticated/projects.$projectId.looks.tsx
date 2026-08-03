@@ -23,9 +23,15 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/looks"
   head: () => ({
     meta: [
       { title: "Looks — StoryForge" },
-      { name: "description", content: "Palettes, prompt fragments and negative constraints per project look." },
+      {
+        name: "description",
+        content: "Palettes, prompt fragments and negative constraints per project look.",
+      },
       { property: "og:title", content: "Looks — StoryForge" },
-      { property: "og:description", content: "Palettes, prompt fragments and negative constraints per project look." },
+      {
+        property: "og:description",
+        content: "Palettes, prompt fragments and negative constraints per project look.",
+      },
     ],
   }),
   component: LooksPage,
@@ -68,8 +74,14 @@ function LooksPage() {
       name,
       description,
       palette: paletteJson,
-      prompt_fragments: fragments.split(",").map((s) => s.trim()).filter(Boolean),
-      negative_constraints: negatives.split(",").map((s) => s.trim()).filter(Boolean),
+      prompt_fragments: fragments
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      negative_constraints: negatives
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     });
     if (error) return toast.error(error.message);
     setOpen(false);

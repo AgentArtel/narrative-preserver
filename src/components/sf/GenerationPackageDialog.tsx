@@ -82,7 +82,6 @@ export function GenerationPackageDialog({
     }
   }
 
-
   function reset() {
     setPkg(null);
     setGenerationId(null);

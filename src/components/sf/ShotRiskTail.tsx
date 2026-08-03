@@ -11,12 +11,7 @@ import {
 } from "@/components/ui/select";
 import { SectionLabel } from "@/components/sf/primitives";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  asRiskTail,
-  riskTailWarnings,
-  type RiskClassRow,
-  type RiskEntry,
-} from "@/lib/craft";
+import { asRiskTail, riskTailWarnings, type RiskClassRow, type RiskEntry } from "@/lib/craft";
 import { toast } from "sonner";
 import { AlertTriangle, Plus, X } from "lucide-react";
 

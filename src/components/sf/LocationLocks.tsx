@@ -84,23 +84,40 @@ export function LocationLocks({ location }: { location: LocationLockRow }) {
     setPlanes(asDepthPlanes(location.depth_planes));
     setNote(location.reverse_verification_note ?? "");
     setMotionNote(location.motion_test_note ?? "");
-  }, [location.id, location.light_logic, location.materials, location.depth_planes, location.reverse_verification_note, location.motion_test_note]);
+  }, [
+    location.id,
+    location.light_logic,
+    location.materials,
+    location.depth_planes,
+    location.reverse_verification_note,
+    location.motion_test_note,
+  ]);
 
   async function update(patch: Record<string, unknown>, message: string) {
     setSaving(true);
-    const { error } = await supabase.from("locations").update(patch as never).eq("id", location.id);
+    const { error } = await supabase
+      .from("locations")
+      .update(patch as never)
+      .eq("id", location.id);
     setSaving(false);
     if (error) return toast.error(error.message);
     qc.invalidateQueries();
     toast.success(message);
   }
 
-  const state = locationLockState({ ...location, light_logic: light, materials, depth_planes: planes });
+  const state = locationLockState({
+    ...location,
+    light_logic: light,
+    materials,
+    depth_planes: planes,
+  });
 
   return (
     <div className="space-y-3">
       <SectionLabel>Plate locks</SectionLabel>
-      <LocationLockChips location={{ ...location, light_logic: light, materials, depth_planes: planes }} />
+      <LocationLockChips
+        location={{ ...location, light_logic: light, materials, depth_planes: planes }}
+      />
 
       <div className="space-y-1.5">
         <span className="label-caps">Light logic</span>
@@ -155,7 +172,9 @@ export function LocationLocks({ location }: { location: LocationLockRow }) {
               placeholder="What sits in this plane"
               value={p.contents}
               onChange={(e) =>
-                setPlanes((ps) => ps.map((x, j) => (j === i ? { ...x, contents: e.target.value } : x)))
+                setPlanes((ps) =>
+                  ps.map((x, j) => (j === i ? { ...x, contents: e.target.value } : x)),
+                )
               }
             />
             <Button

@@ -28,21 +28,36 @@ import {
   type ShotStatus,
 } from "@/lib/storyforge";
 import { toast } from "sonner";
-import { AlertTriangle, Copy, GripVertical, Package, Plus, PanelLeft, PanelRight } from "lucide-react";
+import {
+  AlertTriangle,
+  Copy,
+  GripVertical,
+  Package,
+  Plus,
+  PanelLeft,
+  PanelRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/scene/$sceneId")({
   head: () => ({
     meta: [
       { title: "Scene Workspace — StoryForge" },
-      { name: "description", content: "Storyboard, shot list and per-shot generation context in one workspace." },
+      {
+        name: "description",
+        content: "Storyboard, shot list and per-shot generation context in one workspace.",
+      },
       { property: "og:title", content: "Scene Workspace — StoryForge" },
-      { property: "og:description", content: "Storyboard, shot list and per-shot generation context in one workspace." },
+      {
+        property: "og:description",
+        content: "Storyboard, shot list and per-shot generation context in one workspace.",
+      },
     ],
   }),
   component: SceneWorkspace,
-  errorComponent: ({ error }) => <div className="p-8 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-8 text-sm text-destructive">{error.message}</div>
+  ),
 });
 
 function SceneWorkspace() {
@@ -124,7 +139,6 @@ function SceneWorkspace() {
 
   const { data: vocab } = useVocabularies(projectId);
 
-
   useEffect(() => {
     if (!selectedShotId && shots?.length) setSelectedShotId(shots[0].id);
   }, [shots, selectedShotId]);
@@ -170,12 +184,10 @@ function SceneWorkspace() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
-
   const addShot = useMutation({
     mutationFn: async (afterSort?: number) => {
       const { data: u } = await supabase.auth.getUser();
-      const nextSort = (afterSort ?? (shots?.length ?? 0)) + 1;
+      const nextSort = (afterSort ?? shots?.length ?? 0) + 1;
       const { data, error } = await supabase
         .from("shots")
         .insert({
@@ -236,7 +248,10 @@ function SceneWorkspace() {
 
   const patchShot = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
-      const { error } = await supabase.from("shots").update(patch as never).eq("id", id);
+      const { error } = await supabase
+        .from("shots")
+        .update(patch as never)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -252,7 +267,12 @@ function SceneWorkspace() {
     list.splice(to, 0, moved);
     setDragId(null);
     await Promise.all(
-      list.map((s, i) => supabase.from("shots").update({ sort_order: i + 1 }).eq("id", s.id)),
+      list.map((s, i) =>
+        supabase
+          .from("shots")
+          .update({ sort_order: i + 1 })
+          .eq("id", s.id),
+      ),
     );
     invalidate();
   }
@@ -268,9 +288,12 @@ function SceneWorkspace() {
         .eq("character_id", characterId);
     } else {
       const { data: u } = await supabase.auth.getUser();
-      await supabase
-        .from("shot_characters")
-        .insert({ user_id: u.user!.id, shot_id: selected.id, character_id: characterId, state: {} });
+      await supabase.from("shot_characters").insert({
+        user_id: u.user!.id,
+        shot_id: selected.id,
+        character_id: characterId,
+        state: {},
+      });
     }
     invalidate();
   }
@@ -320,8 +343,6 @@ function SceneWorkspace() {
     void key;
     invalidate();
   }
-
-  
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
@@ -395,7 +416,6 @@ function SceneWorkspace() {
               </Button>
             </form>
           </div>
-
 
           <div className="mt-6 border-t border-border pt-4">
             <SectionLabel>Shots</SectionLabel>
@@ -598,7 +618,6 @@ function SceneWorkspace() {
                 )}
               </div>
 
-
               <div className="space-y-2">
                 <SectionLabel>Camera</SectionLabel>
                 {CAMERA_FIELDS.map((f) => (
@@ -634,8 +653,6 @@ function SceneWorkspace() {
                 classes={vocab?.classes ?? []}
               />
 
-
-
               <div className="space-y-2">
                 <SectionLabel>Cast in shot</SectionLabel>
                 {(library?.characters ?? []).map((c) => {
@@ -657,12 +674,7 @@ function SceneWorkspace() {
                           placeholder="outfit: hooded cloak, damage: torn sleeve"
                           defaultValue={stateSummary(sc.state).replaceAll(" · ", ", ")}
                           onBlur={(e) =>
-                            setStateJson(
-                              "shot_characters",
-                              "character_id",
-                              c.id,
-                              e.target.value,
-                            )
+                            setStateJson("shot_characters", "character_id", c.id, e.target.value)
                           }
                         />
                       )}

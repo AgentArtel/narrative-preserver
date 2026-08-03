@@ -7,7 +7,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/locati
       { title: "Locations — StoryForge" },
       { name: "description", content: "Reusable locations, reference images and canon aspects." },
       { property: "og:title", content: "Locations — StoryForge" },
-      { property: "og:description", content: "Reusable locations, reference images and canon aspects." },
+      {
+        property: "og:description",
+        content: "Reusable locations, reference images and canon aspects.",
+      },
     ],
   }),
   component: () => {

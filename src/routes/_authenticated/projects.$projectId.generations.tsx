@@ -23,9 +23,15 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/genera
   head: () => ({
     meta: [
       { title: "Generations — StoryForge" },
-      { name: "description", content: "Filterable history of every generation handoff and imported result." },
+      {
+        name: "description",
+        content: "Filterable history of every generation handoff and imported result.",
+      },
       { property: "og:title", content: "Generations — StoryForge" },
-      { property: "og:description", content: "Filterable history of every generation handoff and imported result." },
+      {
+        property: "og:description",
+        content: "Filterable history of every generation handoff and imported result.",
+      },
     ],
   }),
   component: GenerationsPage,

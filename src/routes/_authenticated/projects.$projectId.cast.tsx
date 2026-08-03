@@ -7,7 +7,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/cast")
       { title: "Cast — StoryForge" },
       { name: "description", content: "Reusable characters, reference images and canon aspects." },
       { property: "og:title", content: "Cast — StoryForge" },
-      { property: "og:description", content: "Reusable characters, reference images and canon aspects." },
+      {
+        property: "og:description",
+        content: "Reusable characters, reference images and canon aspects.",
+      },
     ],
   }),
   component: () => {

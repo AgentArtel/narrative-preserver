@@ -26,7 +26,6 @@ function verbatimLock(title: string, text: string | null | undefined): string {
   return `${title}\n${text}\n`;
 }
 
-
 /**
  * Compiles the full generation context for a shot. Parameterized by a Supabase
  * client so the browser (RLS as the user) and the MCP server route (scoped
@@ -115,8 +114,6 @@ export async function buildGenerationPackageWith(
     );
   }
 
-
-
   lines.push(
     block("SCENE", [
       `Sequence: ${scene?.sequences?.title ?? "—"}`,
@@ -181,8 +178,6 @@ export async function buildGenerationPackageWith(
       ]),
     );
   }
-
-
 
   for (const se of shotEls ?? []) {
     const el = se.elements;
@@ -257,7 +252,12 @@ export async function buildGenerationPackageWith(
   // Provider Elements: what the operator must attach in the generation tool
   // before rendering. Named identities are how character and location identity
   // carries from one shot to the next.
-  const identityOwnerIds = [...charIds, ...elIds, ...(shot.location_id ? [shot.location_id] : []), shot.id];
+  const identityOwnerIds = [
+    ...charIds,
+    ...elIds,
+    ...(shot.location_id ? [shot.location_id] : []),
+    shot.id,
+  ];
   const { data: identities } = await supabase
     .from("provider_identities")
     .select("provider, capability, external_id, owner_type, owner_id, status")
@@ -298,9 +298,7 @@ export async function buildGenerationPackageWith(
         currentProvider = pe.provider;
         peLines.push(`${currentProvider}:`);
       }
-      peLines.push(
-        `- ${pe.owner_name} (${pe.owner_type}) — ${pe.capability}: ${pe.external_id}`,
-      );
+      peLines.push(`- ${pe.owner_name} (${pe.owner_type}) — ${pe.capability}: ${pe.external_id}`);
     }
     lines.push(
       block("PROVIDER ELEMENTS — attach these in the generation tool before rendering", peLines),

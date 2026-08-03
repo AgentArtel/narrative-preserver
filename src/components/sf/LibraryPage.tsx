@@ -20,7 +20,6 @@ import {
   type LocationLockRow,
 } from "@/components/sf/LocationLocks";
 
-
 import { uploadImage } from "@/lib/upload";
 import { toast } from "sonner";
 import { Plus, Upload } from "lucide-react";
@@ -66,10 +65,7 @@ export function LibraryPage({
           .select("*")
           .eq("project_id", projectId)
           .eq("subject_type", subjectType),
-        supabase
-          .from("reference_links")
-          .select("*, asset_references(*)")
-          .eq("owner_type", table),
+        supabase.from("reference_links").select("*, asset_references(*)").eq("owner_type", table),
       ]);
       if (rowsRes.error) throw rowsRes.error;
       return {
@@ -109,7 +105,12 @@ export function LibraryPage({
         const url = await uploadImage(f);
         const { data: ref, error } = await supabase
           .from("asset_references")
-          .insert({ user_id: u.user!.id, project_id: projectId, image_url: url, roles: ["primary"] })
+          .insert({
+            user_id: u.user!.id,
+            project_id: projectId,
+            image_url: url,
+            roles: ["primary"],
+          })
           .select()
           .single();
         if (error) throw error;
@@ -157,12 +158,8 @@ export function LibraryPage({
               )}
               <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{r.description}</p>
               {table === "locations" && (
-                <LocationLockChips
-                  className="mt-2"
-                  location={r as unknown as LocationLockRow}
-                />
+                <LocationLockChips className="mt-2" location={r as unknown as LocationLockRow} />
               )}
-
             </button>
           ))}
           {(data?.rows ?? []).length === 0 && (
@@ -180,12 +177,17 @@ export function LibraryPage({
               {table === "locations" && (
                 <>
                   <LocationGeography
-                    location={selected as { id: string; landmarks?: unknown; blocking_anchor?: string | null }}
+                    location={
+                      selected as {
+                        id: string;
+                        landmarks?: unknown;
+                        blocking_anchor?: string | null;
+                      }
+                    }
                   />
                   <LocationLocks location={selected as unknown as LocationLockRow} />
                 </>
               )}
-
 
               <div>
                 <SectionLabel>Reference images</SectionLabel>

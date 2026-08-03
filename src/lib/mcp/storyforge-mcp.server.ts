@@ -4,7 +4,13 @@
 import type { DB } from "@/lib/generation-package-core";
 import { buildGenerationPackageWith } from "@/lib/generation-package-core";
 import { insertFramesFromUrls } from "@/lib/frames-core";
-import { SHOT_STATUSES, FRAME_KINDS, SCREEN_SIDES, asLandmarks, LOCK_FIELDS } from "@/lib/storyforge";
+import {
+  SHOT_STATUSES,
+  FRAME_KINDS,
+  SCREEN_SIDES,
+  asLandmarks,
+  LOCK_FIELDS,
+} from "@/lib/storyforge";
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
 import {
   DEPTH_PLANES,
@@ -21,13 +27,11 @@ import {
   type RiskClassRow,
 } from "@/lib/craft";
 
-
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
 const OWNER_TYPES = ["characters", "locations", "elements", "shots"] as const;
 const LOCATION_SELECT =
   "id, name, description, landmarks, blocking_anchor, light_logic, materials, depth_planes, master_frame_id, reverse_frame_id, reverse_verified_at, reverse_verification_note, motion_test_frame_id, motion_test_passed_at, motion_test_note";
-
 
 export const PROTOCOL_VERSION = "2025-06-18";
 
@@ -94,7 +98,12 @@ function oneOf<T extends string>(value: string, allowed: readonly T[], label: st
 }
 
 /** Verifies a referenced row belongs to the authenticated user. */
-async function own(ctx: Ctx, table: string, id: string, select = "id"): Promise<Record<string, unknown>> {
+async function own(
+  ctx: Ctx,
+  table: string,
+  id: string,
+  select = "id",
+): Promise<Record<string, unknown>> {
   const { data, error } = await ctx.db
     .from(table as never)
     .select(select)
@@ -158,7 +167,9 @@ async function upsertNamed(
     .eq("user_id", ctx.userId)
     .eq("name", name)
     .maybeSingle();
-  const patch = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== null));
+  const patch = Object.fromEntries(
+    Object.entries(fields).filter(([, v]) => v !== undefined && v !== null),
+  );
   if (existing) {
     const id = (existing as { id: string }).id;
     if (Object.keys(patch).length) {
@@ -238,7 +249,6 @@ async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
   ];
 }
 
-
 export const TOOLS: Tool[] = [
   {
     name: "list_projects",
@@ -283,27 +293,51 @@ export const TOOLS: Tool[] = [
         "id, title, description, status, gate, code, style_lock, continuity, direction, locks_frozen_at",
       );
 
-      const [seqs, characters, locations, elements, looks, canon, moves, risks] = await Promise.all([
-        ctx.db
-          .from("sequences")
-          .select(
-            "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order, risk_tail))",
-          )
-          .eq("project_id", projectId)
-          .eq("user_id", ctx.userId)
-          .order("sort_order"),
-        ctx.db.from("characters").select("id, name, role, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("locations").select(LOCATION_SELECT).eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("elements").select("id, name, element_type, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("looks").select("id, name, description, palette, prompt_fragments, negative_constraints").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db
-          .from("canon_records")
-          .select("id", { count: "exact", head: true })
-          .eq("project_id", projectId)
-          .eq("user_id", ctx.userId),
-        ctx.db.from("camera_moves").select("*").or(`project_id.is.null,project_id.eq.${projectId}`),
-        ctx.db.from("risk_classes").select("*").or(`project_id.is.null,project_id.eq.${projectId}`),
-      ]);
+      const [seqs, characters, locations, elements, looks, canon, moves, risks] = await Promise.all(
+        [
+          ctx.db
+            .from("sequences")
+            .select(
+              "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order, risk_tail))",
+            )
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId)
+            .order("sort_order"),
+          ctx.db
+            .from("characters")
+            .select("id, name, role, description")
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("locations")
+            .select(LOCATION_SELECT)
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("elements")
+            .select("id, name, element_type, description")
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("looks")
+            .select("id, name, description, palette, prompt_fragments, negative_constraints")
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("canon_records")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("camera_moves")
+            .select("*")
+            .or(`project_id.is.null,project_id.eq.${projectId}`),
+          ctx.db
+            .from("risk_classes")
+            .select("*")
+            .or(`project_id.is.null,project_id.eq.${projectId}`),
+        ],
+      );
       return {
         project,
         sequences: seqs.data ?? [],
@@ -341,10 +375,9 @@ export const TOOLS: Tool[] = [
   {
     name: "list_canon",
     description: "List canon records for a project, optionally filtered by subject.",
-    inputSchema: schema(
-      { project_id: S.string, subject_type: S.string, subject_id: S.string },
-      ["project_id"],
-    ),
+    inputSchema: schema({ project_id: S.string, subject_type: S.string, subject_id: S.string }, [
+      "project_id",
+    ]),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
       await own(ctx, "projects", projectId);
@@ -411,8 +444,6 @@ export const TOOLS: Tool[] = [
       return data;
     },
   },
-
-
 
   /* ---------------------------------------------------------- assets */
   {
@@ -514,11 +545,7 @@ export const TOOLS: Tool[] = [
       const locationId = str(a, "location_id");
       await own(ctx, "locations", locationId);
       const patch: Record<string, unknown> = {};
-      for (const key of [
-        "master_frame_id",
-        "reverse_frame_id",
-        "motion_test_frame_id",
-      ] as const) {
+      for (const key of ["master_frame_id", "reverse_frame_id", "motion_test_frame_id"] as const) {
         const frameId = optStr(a, key);
         if (frameId) {
           await own(ctx, "frames", frameId);
@@ -547,7 +574,6 @@ export const TOOLS: Tool[] = [
       return { ...data, lock_state: locationLockState(data as never) };
     },
   },
-
 
   {
     name: "upsert_element",
@@ -626,7 +652,12 @@ export const TOOLS: Tool[] = [
         { reference_id: ref.id, owner_type: ownerType, owner_id: ownerId, role },
         "id",
       );
-      return { reference_id: ref.id, reference_link_id: link.id, owner_type: ownerType, owner_id: ownerId };
+      return {
+        reference_id: ref.id,
+        reference_link_id: link.id,
+        owner_type: ownerType,
+        owner_id: ownerId,
+      };
     },
   },
   {
@@ -844,23 +875,41 @@ export const TOOLS: Tool[] = [
 
   {
     name: "add_character_to_shot",
-    description: "Attach a character to a shot with per-shot state (merged into any existing state).",
+    description:
+      "Attach a character to a shot with per-shot state (merged into any existing state).",
     inputSchema: schema({ shot_id: S.string, character_id: S.string, state: S.object }, [
       "shot_id",
       "character_id",
     ]),
     handler: (ctx, a) =>
-      addJoin(ctx, "shot_characters", "character_id", "characters", str(a, "shot_id"), str(a, "character_id"), optObj(a, "state")),
+      addJoin(
+        ctx,
+        "shot_characters",
+        "character_id",
+        "characters",
+        str(a, "shot_id"),
+        str(a, "character_id"),
+        optObj(a, "state"),
+      ),
   },
   {
     name: "add_element_to_shot",
-    description: "Attach an element to a shot with per-shot state (merged into any existing state).",
+    description:
+      "Attach an element to a shot with per-shot state (merged into any existing state).",
     inputSchema: schema({ shot_id: S.string, element_id: S.string, state: S.object }, [
       "shot_id",
       "element_id",
     ]),
     handler: (ctx, a) =>
-      addJoin(ctx, "shot_elements", "element_id", "elements", str(a, "shot_id"), str(a, "element_id"), optObj(a, "state")),
+      addJoin(
+        ctx,
+        "shot_elements",
+        "element_id",
+        "elements",
+        str(a, "shot_id"),
+        str(a, "element_id"),
+        optObj(a, "state"),
+      ),
   },
 
   /* -------------------------------------------------- generation flow */
@@ -1020,7 +1069,11 @@ export const TOOLS: Tool[] = [
           .eq("id", frame.shot_id)
           .eq("user_id", ctx.userId);
       }
-      return { frame_id: frameId, shot_id: frame.shot_id, shot_status: shot.status === "final" ? "final" : "approved" };
+      return {
+        frame_id: frameId,
+        shot_id: frame.shot_id,
+        shot_status: shot.status === "final" ? "final" : "approved",
+      };
     },
   },
   {
@@ -1078,7 +1131,6 @@ export const TOOLS: Tool[] = [
   },
 ];
 
-
 async function addJoin(
   ctx: Ctx,
   table: "shot_characters" | "shot_elements",
@@ -1108,7 +1160,12 @@ async function addJoin(
 
     return { id: existing.id, shot_id: shotId, [fkColumn]: assetId, created: false };
   }
-  const row = await insertRow(ctx, table, { shot_id: shotId, [fkColumn]: assetId, state: state ?? {} }, "id");
+  const row = await insertRow(
+    ctx,
+    table,
+    { shot_id: shotId, [fkColumn]: assetId, state: state ?? {} },
+    "id",
+  );
   return { id: row.id, shot_id: shotId, [fkColumn]: assetId, created: true };
 }
 
