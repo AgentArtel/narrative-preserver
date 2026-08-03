@@ -15,17 +15,22 @@ import {
 } from "@/components/ui/select";
 import { Chip, SectionLabel, StatusBadge, StatusDot } from "@/components/sf/primitives";
 import { GenerationPackageDialog } from "@/components/sf/GenerationPackageDialog";
+import { ShotRiskTail } from "@/components/sf/ShotRiskTail";
+import { useVocabularies } from "@/hooks/useVocabularies";
+import { cameraMoveWarnings, locationLockState } from "@/lib/craft";
 import {
   CAMERA_FIELDS,
   SHOT_STATUSES,
+  HELD_STILL_HINT,
   asRecord,
   stateSummary,
   type Camera,
   type ShotStatus,
 } from "@/lib/storyforge";
 import { toast } from "sonner";
-import { Copy, GripVertical, Package, Plus, PanelLeft, PanelRight } from "lucide-react";
+import { AlertTriangle, Copy, GripVertical, Package, Plus, PanelLeft, PanelRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/scene/$sceneId")({
   head: () => ({
