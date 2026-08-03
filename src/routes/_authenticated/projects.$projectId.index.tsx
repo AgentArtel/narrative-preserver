@@ -255,6 +255,10 @@ function ProjectHome() {
         onOpenChange={setLocksOpen}
       />
 
+      <VocabularyDialog projectId={projectId} open={vocabOpen} onOpenChange={setVocabOpen} />
+
+
+
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
