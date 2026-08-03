@@ -105,10 +105,13 @@ export function McpAccessDialog({
         <DialogHeader>
           <DialogTitle>MCP access</DialogTitle>
           <DialogDescription>
-            Generate a personal key so an external AI client can read and write this workspace over
-            MCP. Only the hash is stored — the key is shown once.
+            Legacy key-based access. Prefer the OAuth endpoint below — add{" "}
+            <span className="font-mono">{origin}/mcp</span> as a custom connector in Claude and sign
+            in when prompted; no secret to copy or carry, and you can revoke it from the client.
+            Keys here keep working for now and will be removed once OAuth is confirmed.
           </DialogDescription>
         </DialogHeader>
+
 
         <div className="space-y-4">
           <div className="flex items-end gap-2">

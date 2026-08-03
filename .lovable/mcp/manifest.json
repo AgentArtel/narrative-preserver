@@ -1,0 +1,769 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://kzojxzcfemjziaqovffa.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "storyforge-canvas",
+      "version": "1.0.0",
+      "title": "StoryForge Canvas"
+    },
+    "tools": [
+      {
+        "name": "list_projects",
+        "title": "list_projects",
+        "description": "List all StoryForge projects for this account.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_project_overview",
+        "title": "get_project_overview",
+        "description": "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_context_package",
+        "title": "get_context_package",
+        "description": "Compile the full generation context for a shot (scene, camera, cast state, location, elements, look, canon, references).",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "shot_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_canon",
+        "title": "list_canon",
+        "description": "List canon records for a project, optionally filtered by subject.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "subject_type": {
+              "type": "string"
+            },
+            "subject_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_locks",
+        "title": "get_locks",
+        "description": "Read the three project locks (style lock, continuity, direction) that are emitted verbatim at the top of every generation package.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_locks",
+        "title": "set_locks",
+        "description": "Set one or more project locks. These are re-emitted byte-identically in every prompt; editing them changes every future prompt in the project, and frames approved earlier were made under the previous locks. Pass freeze: true to stamp locks_frozen_at.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "style_lock": {
+              "type": "string"
+            },
+            "continuity": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string"
+            },
+            "freeze": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "project_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_character",
+        "title": "upsert_character",
+        "description": "Create or update a character, matched on project + name.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "attributes": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "project_id",
+            "name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_location",
+        "title": "upsert_location",
+        "description": "Create or update a location, matched on project + name. Landmarks are named world features each fixed to a screen side; the blocking anchor is the single large immovable object all character positions are measured against.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "landmarks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "side": {
+                    "type": "string",
+                    "enum": [
+                      "left",
+                      "right",
+                      "centre",
+                      "upstage",
+                      "downstage",
+                      "overhead",
+                      "underfoot"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "side"
+                ]
+              }
+            },
+            "blocking_anchor": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id",
+            "name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_element",
+        "title": "upsert_element",
+        "description": "Create or update an element (prop, effect, creature), matched on project + name.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "element_type": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id",
+            "name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upsert_look",
+        "title": "upsert_look",
+        "description": "Create or update a visual look, matched on project + name.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "palette": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "hex": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "hex"
+                ]
+              }
+            },
+            "prompt_fragments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "negative_constraints": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "project_id",
+            "name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "attach_reference",
+        "title": "attach_reference",
+        "description": "Store a reference image and link it to a character, location, element or shot (owner_type uses table names).",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "image_url": {
+              "type": "string"
+            },
+            "owner_type": {
+              "type": "string",
+              "enum": [
+                "characters",
+                "locations",
+                "elements",
+                "shots"
+              ]
+            },
+            "owner_id": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id",
+            "image_url",
+            "owner_type",
+            "owner_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "register_provider_identity",
+        "title": "register_provider_identity",
+        "description": "Record an external provider identity (e.g. a Higgsfield Soul ID) against a character, location, element or shot.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string"
+            },
+            "capability": {
+              "type": "string"
+            },
+            "external_id": {
+              "type": "string"
+            },
+            "owner_type": {
+              "type": "string",
+              "enum": [
+                "characters",
+                "locations",
+                "elements",
+                "shots"
+              ]
+            },
+            "owner_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "provider",
+            "external_id",
+            "owner_type",
+            "owner_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_sequence",
+        "title": "create_sequence",
+        "description": "Create a sequence in a project, appended at the end.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id",
+            "title"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_scene",
+        "title": "create_scene",
+        "description": "Create a scene in a sequence, appended at the end with status 'drafting'.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "sequence_id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "brief": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "sequence_id",
+            "title"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_beats",
+        "title": "create_beats",
+        "description": "Append beats to a scene, in the given order.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "scene_id": {
+              "type": "string"
+            },
+            "descriptions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "scene_id",
+            "descriptions"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_shot",
+        "title": "create_shot",
+        "description": "Create a shot in a scene, appended at the end with status 'idea'.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "scene_id": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "shot_number": {
+              "type": "string"
+            },
+            "dialogue": {
+              "type": "string"
+            },
+            "duration_seconds": {
+              "type": "number"
+            },
+            "camera": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "beat_id": {
+              "type": "string"
+            },
+            "location_id": {
+              "type": "string"
+            },
+            "location_state": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "look_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "scene_id",
+            "description"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_shot",
+        "title": "update_shot",
+        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "patch": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "shot_id",
+            "patch"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_character_to_shot",
+        "title": "add_character_to_shot",
+        "description": "Attach a character to a shot with per-shot state (merged into any existing state).",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "character_id": {
+              "type": "string"
+            },
+            "state": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "shot_id",
+            "character_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_element_to_shot",
+        "title": "add_element_to_shot",
+        "description": "Attach an element to a shot with per-shot state (merged into any existing state).",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "element_id": {
+              "type": "string"
+            },
+            "state": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "shot_id",
+            "element_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_generation",
+        "title": "log_generation",
+        "description": "Record a generation handoff for a shot.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "tool": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "negative_prompt": {
+              "type": "string"
+            },
+            "settings": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "handed_off",
+                "imported",
+                "rejected"
+              ]
+            },
+            "cost_credits": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "shot_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_frames",
+        "title": "add_frames",
+        "description": "Insert candidate frames from image URLs. With generation_id, marks that generation imported and the shot 'candidates'.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "image_urls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "concept",
+                "storyboard",
+                "keyframe",
+                "start",
+                "end",
+                "final"
+              ]
+            },
+            "generation_id": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "shot_id",
+            "image_urls"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "promote_canon",
+        "title": "promote_canon",
+        "description": "Create or update a canon record for a subject + aspect (re-promoting an aspect updates it instead of duplicating).",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "subject_type": {
+              "type": "string",
+              "enum": [
+                "character",
+                "location",
+                "element",
+                "scene",
+                "shot"
+              ]
+            },
+            "subject_id": {
+              "type": "string"
+            },
+            "aspect": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "source_frame_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_id",
+            "subject_type",
+            "subject_id",
+            "aspect",
+            "description"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "approve_frame",
+        "title": "approve_frame",
+        "description": "Approve a frame: unapproves sibling frames on the shot and moves the shot to 'approved' unless it is already 'final'.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "frame_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame_id"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
