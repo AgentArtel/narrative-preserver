@@ -275,7 +275,17 @@ function ShotDetail() {
               )}
             </div>
           </div>
+
+          <div className="mt-8">
+            <KeyframePairs
+              shotId={shotId}
+              frames={frames.map((f) => ({ id: f.id, image_url: f.image_url, kind: f.kind }))}
+              movement={movement}
+              moves={vocab?.moves ?? []}
+            />
+          </div>
         </section>
+
 
         <aside className="space-y-6">
           <div>
