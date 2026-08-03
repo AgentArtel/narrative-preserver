@@ -1025,7 +1025,61 @@ export const TOOLS: Tool[] = [
       return { frame_id: frameId, shot_id: frame.shot_id, shot_status: shot.status === "final" ? "final" : "approved" };
     },
   },
+  {
+    name: "pair_keyframes",
+    description:
+      "Record an a/b keyframe pair for a shot. The video model interpolates between a and b, so the form must match the shot's declared camera move: locked_camera holds framing and moves the subject; moving_camera changes framing between the plates. Returns any mismatch as a warning.",
+    inputSchema: schema(
+      {
+        shot_id: S.string,
+        a_frame_id: S.string,
+        b_frame_id: S.string,
+        form: { type: "string", enum: KEYFRAME_FORMS.map((f) => f.value) },
+        notes: S.string,
+      },
+      ["shot_id", "a_frame_id", "b_frame_id", "form"],
+    ),
+    handler: async (ctx, a) => {
+      const shotId = str(a, "shot_id");
+      const shot = (await own(ctx, "shots", shotId, "id, camera")) as { camera: unknown };
+      const aFrame = str(a, "a_frame_id");
+      const bFrame = str(a, "b_frame_id");
+      if (aFrame === bFrame) throw new Error("The a and b frames must be different frames");
+      await own(ctx, "frames", aFrame);
+      await own(ctx, "frames", bFrame);
+      const form = oneOf(
+        str(a, "form"),
+        KEYFRAME_FORMS.map((f) => f.value) as KeyframeForm[],
+        "keyframe form",
+      );
+      const row = await insertRow(
+        ctx,
+        "keyframe_pairs",
+        {
+          shot_id: shotId,
+          a_frame_id: aFrame,
+          b_frame_id: bFrame,
+          form,
+          notes: optStr(a, "notes"),
+        },
+        "id",
+      );
+
+      const { data: moveRows } = await ctx.db.from("camera_moves").select("*");
+      const movement = ((shot.camera ?? {}) as { movement?: string }).movement;
+      return {
+        pair_id: row.id,
+        shot_id: shotId,
+        warnings: keyframeFormWarnings(
+          form,
+          movement,
+          mergeVocab((moveRows ?? []) as unknown as CameraMoveRow[]),
+        ),
+      };
+    },
+  },
 ];
+
 
 async function addJoin(
   ctx: Ctx,
