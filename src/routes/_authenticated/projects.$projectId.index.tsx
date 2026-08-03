@@ -16,8 +16,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ChevronRight, Lock as LockIcon, Plus } from "lucide-react";
+import { ChevronRight, ListTree, Lock as LockIcon, Plus } from "lucide-react";
 import { ProjectLocksDialog } from "@/components/sf/ProjectLocksDialog";
+import { VocabularyDialog } from "@/components/sf/VocabularyDialog";
 import { LOCK_FIELDS } from "@/lib/storyforge";
 
 
