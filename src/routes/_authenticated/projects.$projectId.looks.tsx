@@ -89,6 +89,7 @@ function LooksPage() {
           <Plus className="size-4" /> New look
         </Button>
       </div>
+      <p className="mt-2 max-w-3xl text-xs text-muted-foreground/80">{STYLE_LOOK_BOUNDARY}</p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {(looks ?? []).map((l) => (
