@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Chip, SectionLabel, StatusBadge, CanonMarker } from "@/components/sf/primitives";
 import { GenerationPackageDialog } from "@/components/sf/GenerationPackageDialog";
 import { PromoteToCanonDialog } from "@/components/sf/PromoteToCanonDialog";
+import { KeyframePairs } from "@/components/sf/KeyframePairs";
+import { useVocabularies } from "@/hooks/useVocabularies";
+import type { Camera } from "@/lib/storyforge";
 import { uploadImage } from "@/lib/upload";
 import { importGenerationResults } from "@/lib/import-results";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Check, Package, Sparkles, Upload } from "lucide-react";
