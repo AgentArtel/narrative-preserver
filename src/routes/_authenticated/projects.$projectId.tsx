@@ -107,3 +107,60 @@ function ProjectLayout() {
     </div>
   );
 }
+
+/** Pipeline position and the short code the Element naming convention uses. */
+function ProjectCodeAndGate({
+  projectId,
+  project,
+}: {
+  projectId: string;
+  project: { gate?: string | null; code?: string | null } | null | undefined;
+}) {
+  const qc = useQueryClient();
+  const [code, setCode] = useState("");
+
+  useEffect(() => {
+    setCode(project?.code ?? "");
+  }, [project?.code]);
+
+  async function save(patch: Record<string, unknown>) {
+    const { error } = await supabase
+      .from("projects")
+      .update(patch as never)
+      .eq("id", projectId);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries();
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        className="h-7 w-20 font-mono text-xs uppercase"
+        placeholder="CODE"
+        title={PROJECT_CODE_HINT}
+        value={code}
+        onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))}
+        onBlur={() => {
+          const next = code.trim();
+          if (next === (project?.code ?? "")) return;
+          if (next && !isValidProjectCode(next)) {
+            return toast.error("Project code must be 2–4 uppercase letters");
+          }
+          save({ code: next || null });
+        }}
+      />
+      <Select value={project?.gate ?? "G0"} onValueChange={(v) => save({ gate: v })}>
+        <SelectTrigger className="h-7 w-44 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {GATES.map((g) => (
+            <SelectItem key={g.value} value={g.value}>
+              {g.value} {g.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
