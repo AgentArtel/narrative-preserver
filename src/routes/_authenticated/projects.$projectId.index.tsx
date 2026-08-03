@@ -186,6 +186,43 @@ function ProjectHome() {
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{data.project.description}</p>
       )}
 
+      <section className="mt-6 rounded-lg border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <SectionLabel>Production locks</SectionLabel>
+            <p className="max-w-2xl text-xs text-muted-foreground">
+              Style lock, continuity and direction are emitted verbatim at the top of every
+              generation package in this project.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setLocksOpen(true)}>
+            <Lock className="size-4" /> {lockCount ? "Edit locks" : "Set locks"}
+          </Button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {LOCK_FIELDS.map((f) => {
+            const set = !!(data?.project as Record<string, unknown> | undefined)?.[f.key];
+            return (
+              <span
+                key={f.key}
+                className={`rounded border px-2 py-1 ${
+                  set
+                    ? "border-primary/60 text-primary"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {f.label} · {set ? "set" : "empty"}
+              </span>
+            );
+          })}
+          {data?.project?.locks_frozen_at && (
+            <span className="rounded border border-border px-2 py-1 text-muted-foreground">
+              Frozen {new Date(data.project.locks_frozen_at).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      </section>
+
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-6">
         <Stat label="Scenes" value={data?.counts.scenes ?? 0} />
         <Stat label="Shots" value={data?.counts.shots ?? 0} />
@@ -194,6 +231,14 @@ function ProjectHome() {
         <Stat label="Elements" value={data?.counts.elements ?? 0} />
         <Stat label="Canon" value={data?.counts.canon ?? 0} />
       </div>
+
+      <ProjectLocksDialog
+        projectId={projectId}
+        project={data?.project}
+        open={locksOpen}
+        onOpenChange={setLocksOpen}
+      />
+
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
