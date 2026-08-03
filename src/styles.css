@@ -45,6 +45,7 @@
   --color-status-generating: var(--status-generating);
   --color-status-candidates: var(--status-candidates);
   --color-status-revision: var(--status-revision);
+  --color-status-held-still: var(--status-held-still);
   --color-status-approved: var(--status-approved);
   --color-status-final: var(--status-final);
   --color-sidebar: var(--sidebar);
@@ -104,6 +105,7 @@
   --status-generating: oklch(0.72 0.11 150);
   --status-candidates: oklch(0.74 0.14 95);
   --status-revision: oklch(0.62 0.16 35);
+  --status-held-still: oklch(0.66 0.01 250);
   --status-approved: oklch(0.76 0.15 72);
   --status-final: oklch(0.86 0.06 80);
 
