@@ -161,13 +161,18 @@ export async function buildGenerationPackageWith(
 
   if (location) {
     const ls = asRecord(shot.location_state);
-    const landmarks = asLandmarks((location as Record<string, unknown>).landmarks);
-    const anchor = (location as Record<string, unknown>).blocking_anchor as string | null;
+    const loc = location as Record<string, unknown>;
+    const landmarks = asLandmarks(loc.landmarks);
+    const anchor = loc.blocking_anchor as string | null;
+    const depth = asDepthPlanes(loc.depth_planes);
     lines.push(
       block(`LOCATION — ${location.name}`, [
         `Description: ${location.description ?? "—"}`,
         ...landmarks.map((l) => `Landmark / ${l.name}: ${l.side}`),
         ...(anchor ? [`Blocking anchor: ${anchor}`] : []),
+        ...(loc.light_logic ? [`Light logic: ${loc.light_logic as string}`] : []),
+        ...(loc.materials ? [`Materials: ${loc.materials as string}`] : []),
+        ...depth.map((d) => `Depth / ${d.plane}: ${d.contents}`),
         ...Object.entries(ls).map(([k, v]) => `shot state / ${k}: ${v}`),
         ...canonFor("location", location.id).map(
           (r) => `CANON / ${r.aspect}: ${r.description ?? ""}`,
@@ -175,6 +180,7 @@ export async function buildGenerationPackageWith(
       ]),
     );
   }
+
 
 
   for (const se of shotEls ?? []) {
