@@ -409,7 +409,7 @@ export const TOOLS: Tool[] = [
   {
     name: "upsert_location",
     description:
-      "Create or update a location, matched on project + name. Landmarks are named world features each fixed to a screen side; the blocking anchor is the single large immovable object all character positions are measured against.",
+      "Create or update a location, matched on project + name. Carries the five locks: geography (landmarks fixed to a screen side plus the single immovable blocking anchor), light logic, materials and depth planes. A plate is not locked until its reverse angle has been generated separately and verified — see stamp_location_verification.",
     inputSchema: schema(
       {
         project_id: S.string,
@@ -428,16 +428,97 @@ export const TOOLS: Tool[] = [
           },
         },
         blocking_anchor: S.string,
+        light_logic: S.string,
+        materials: S.string,
+        depth_planes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              plane: { type: "string", enum: [...DEPTH_PLANES] },
+              contents: S.string,
+            },
+            required: ["plane", "contents"],
+            additionalProperties: false,
+          },
+        },
       },
       ["project_id", "name"],
     ),
-    handler: (ctx, a) =>
-      upsertNamed(ctx, "locations", str(a, "project_id"), str(a, "name"), {
+    handler: async (ctx, a) => {
+      const row = (await upsertNamed(ctx, "locations", str(a, "project_id"), str(a, "name"), {
         description: optStr(a, "description"),
         landmarks: a.landmarks === undefined ? null : asLandmarks(a.landmarks),
         blocking_anchor: optStr(a, "blocking_anchor"),
-      }),
+        light_logic: optStr(a, "light_logic"),
+        materials: optStr(a, "materials"),
+        depth_planes: a.depth_planes === undefined ? null : asDepthPlanes(a.depth_planes),
+      })) as Record<string, unknown>;
+      const id = String(row.id ?? row.location_id ?? "");
+      const { data: fresh } = await ctx.db
+        .from("locations")
+        .select(LOCATION_SELECT)
+        .eq("id", id)
+        .eq("user_id", ctx.userId)
+        .maybeSingle();
+      return { ...row, lock_state: locationLockState(fresh as never) };
+    },
   },
+  {
+    name: "stamp_location_verification",
+    description:
+      "Record the master and reverse plates for a location and stamp verification. Screen-left becomes screen-right the moment the camera turns, so the reverse angle must be generated separately and checked against the geography before the plate is treated as locked. The motion test stamps that the plate survives a camera move.",
+    inputSchema: schema(
+      {
+        location_id: S.string,
+        master_frame_id: S.string,
+        reverse_frame_id: S.string,
+        reverse_verified: { type: "boolean" },
+        reverse_verification_note: S.string,
+        motion_test_frame_id: S.string,
+        motion_test_passed: { type: "boolean" },
+        motion_test_note: S.string,
+      },
+      ["location_id"],
+    ),
+    handler: async (ctx, a) => {
+      const locationId = str(a, "location_id");
+      await own(ctx, "locations", locationId);
+      const patch: Record<string, unknown> = {};
+      for (const key of [
+        "master_frame_id",
+        "reverse_frame_id",
+        "motion_test_frame_id",
+      ] as const) {
+        const frameId = optStr(a, key);
+        if (frameId) {
+          await own(ctx, "frames", frameId);
+          patch[key] = frameId;
+        }
+      }
+      const note = optStr(a, "reverse_verification_note");
+      if (note !== null) patch.reverse_verification_note = note;
+      const motionNote = optStr(a, "motion_test_note");
+      if (motionNote !== null) patch.motion_test_note = motionNote;
+      if (typeof a.reverse_verified === "boolean") {
+        patch.reverse_verified_at = a.reverse_verified ? new Date().toISOString() : null;
+      }
+      if (typeof a.motion_test_passed === "boolean") {
+        patch.motion_test_passed_at = a.motion_test_passed ? new Date().toISOString() : null;
+      }
+      if (!Object.keys(patch).length) throw new Error("Nothing to stamp");
+      const { data, error } = await ctx.db
+        .from("locations")
+        .update(patch as never)
+        .eq("id", locationId)
+        .eq("user_id", ctx.userId)
+        .select(LOCATION_SELECT)
+        .single();
+      if (error) throw new Error(error.message);
+      return { ...data, lock_state: locationLockState(data as never) };
+    },
+  },
+
 
   {
     name: "upsert_element",
