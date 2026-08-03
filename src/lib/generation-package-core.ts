@@ -161,9 +161,13 @@ export async function buildGenerationPackageWith(
 
   if (location) {
     const ls = asRecord(shot.location_state);
+    const landmarks = asLandmarks((location as Record<string, unknown>).landmarks);
+    const anchor = (location as Record<string, unknown>).blocking_anchor as string | null;
     lines.push(
       block(`LOCATION — ${location.name}`, [
         `Description: ${location.description ?? "—"}`,
+        ...landmarks.map((l) => `Landmark / ${l.name}: ${l.side}`),
+        ...(anchor ? [`Blocking anchor: ${anchor}`] : []),
         ...Object.entries(ls).map(([k, v]) => `shot state / ${k}: ${v}`),
         ...canonFor("location", location.id).map(
           (r) => `CANON / ${r.aspect}: ${r.description ?? ""}`,
@@ -171,6 +175,7 @@ export async function buildGenerationPackageWith(
       ]),
     );
   }
+
 
   for (const se of shotEls ?? []) {
     const el = se.elements;
