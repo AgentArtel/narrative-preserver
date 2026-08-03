@@ -80,6 +80,9 @@ function ShotDetail() {
   const approved = frames.find((f) => f.is_approved);
   const candidates = frames.filter((f) => !f.is_approved);
   const prevApproved = data?.prev?.frames?.find((f) => f.is_approved)?.image_url;
+  const { data: vocab } = useVocabularies(projectId);
+  const movement = ((shot?.camera ?? {}) as Camera).movement;
+
 
   async function approveFrame(frameId: string) {
     await supabase.from("frames").update({ is_approved: false }).eq("shot_id", shotId);
