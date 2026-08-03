@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { asPalette, asRecord, type Camera } from "./storyforge";
+import { asLandmarks, asPalette, asRecord, LOCK_FIELDS, type Camera } from "./storyforge";
 
 export type DB = SupabaseClient<Database>;
 
@@ -15,6 +15,16 @@ function block(title: string, lines: string[]): string {
   if (!lines.length) return "";
   return `${title}\n${lines.map((l) => `  ${l}`).join("\n")}\n`;
 }
+
+/**
+ * Locks are reproduced byte-identically in every prompt: no indenting, no
+ * re-wrapping, no interpolation. Never route these through `block()`.
+ */
+function verbatimLock(title: string, text: string | null | undefined): string {
+  if (!text || !text.trim()) return "";
+  return `${title}\n${text}\n`;
+}
+
 
 /**
  * Compiles the full generation context for a shot. Parameterized by a Supabase
