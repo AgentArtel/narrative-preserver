@@ -57,6 +57,55 @@ export const CAMERA_FIELDS = [
 export type Camera = Partial<Record<(typeof CAMERA_FIELDS)[number]["key"], string>>;
 export type PaletteEntry = { name: string; hex: string };
 
+export const SCREEN_SIDES = [
+  "left",
+  "right",
+  "centre",
+  "upstage",
+  "downstage",
+  "overhead",
+  "underfoot",
+] as const;
+
+export type ScreenSide = (typeof SCREEN_SIDES)[number];
+export type Landmark = { name: string; side: ScreenSide };
+
+export function asLandmarks(value: unknown): Landmark[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((v) => v && typeof v === "object")
+    .map((v) => {
+      const raw = v as { name?: unknown; side?: unknown };
+      const side = String(raw.side ?? "centre") as ScreenSide;
+      return {
+        name: String(raw.name ?? ""),
+        side: (SCREEN_SIDES as readonly string[]).includes(side) ? side : ("centre" as ScreenSide),
+      };
+    })
+    .filter((l) => l.name);
+}
+
+export const LOCK_FIELDS = [
+  {
+    key: "style_lock",
+    label: "Style lock",
+    hint: "The medium: render technique, linework, shading value count, palette law, and the negative list of what it must never become.",
+  },
+  {
+    key: "continuity",
+    label: "Continuity",
+    hint: "Character identity, world rules, location geography, and the palette law restated.",
+  },
+  {
+    key: "direction",
+    label: "Direction",
+    hint: "Camera vocabulary, framing convention, cut style, sound-cue policy, and whether the project uses dialogue.",
+  },
+] as const;
+
+export type LockKey = (typeof LOCK_FIELDS)[number]["key"];
+
+
 export function asRecord(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const out: Record<string, string> = {};
