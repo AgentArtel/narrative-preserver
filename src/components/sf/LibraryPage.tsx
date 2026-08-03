@@ -165,10 +165,14 @@ export function LibraryPage({
                 <p className="text-sm text-muted-foreground">{selected.description}</p>
               </div>
               {table === "locations" && (
-                <LocationGeography
-                  location={selected as { id: string; landmarks?: unknown; blocking_anchor?: string | null }}
-                />
+                <>
+                  <LocationGeography
+                    location={selected as { id: string; landmarks?: unknown; blocking_anchor?: string | null }}
+                  />
+                  <LocationLocks location={selected as unknown as LocationLockRow} />
+                </>
               )}
+
 
               <div>
                 <SectionLabel>Reference images</SectionLabel>
