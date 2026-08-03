@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { LOCK_FIELDS, type LockKey } from "@/lib/storyforge";
+import { LOCK_FIELDS, STYLE_LOOK_BOUNDARY, type LockKey } from "@/lib/storyforge";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 
