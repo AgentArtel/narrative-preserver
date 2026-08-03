@@ -105,6 +105,10 @@ export const LOCK_FIELDS = [
 
 export type LockKey = (typeof LOCK_FIELDS)[number]["key"];
 
+/** Stated in both the style lock editor and the Look editor, identically. */
+export const STYLE_LOOK_BOUNDARY =
+  "STYLE LOCK is the medium — render technique, linework, value structure, palette law, negative list. It is project-wide, immutable once frozen, and emitted verbatim in every package. A Look is a variation within that medium — an act's palette shift, a time of day. A Look never contradicts the lock.";
+
 
 export function asRecord(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
