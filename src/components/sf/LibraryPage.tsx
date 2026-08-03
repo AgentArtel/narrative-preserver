@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Chip, SectionLabel } from "@/components/sf/primitives";
+import { LocationGeography } from "@/components/sf/LocationGeography";
+
 import { uploadImage } from "@/lib/upload";
 import { toast } from "sonner";
 import { Plus, Upload } from "lucide-react";
