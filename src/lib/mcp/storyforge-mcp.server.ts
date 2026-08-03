@@ -208,7 +208,38 @@ const UPDATABLE_SHOT_KEYS = [
   "status",
   "beat_id",
   "shot_number",
+  "risk_tail",
 ] as const;
+
+/**
+ * The same warnings the editor shows, returned to the agent. Risk text is
+ * app-only: it is never emitted into a generation package.
+ */
+async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
+  const { data: shot } = await ctx.db
+    .from("shots")
+    .select("camera, risk_tail, scenes(sequences(project_id))")
+    .eq("id", shotId)
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+  if (!shot) return [];
+  const projectId = (shot as { scenes?: { sequences?: { project_id?: string } } }).scenes?.sequences
+    ?.project_id;
+  const filter = projectId ? `project_id.is.null,project_id.eq.${projectId}` : "project_id.is.null";
+  const [moves, risks] = await Promise.all([
+    ctx.db.from("camera_moves").select("*").or(filter),
+    ctx.db.from("risk_classes").select("*").or(filter),
+  ]);
+  const movement = ((shot.camera ?? {}) as { movement?: string }).movement;
+  return [
+    ...cameraMoveWarnings(movement, mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[])),
+    ...riskTailWarnings(
+      asRiskTail(shot.risk_tail),
+      mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
+    ),
+  ];
+}
+
 
 export const TOOLS: Tool[] = [
   {
