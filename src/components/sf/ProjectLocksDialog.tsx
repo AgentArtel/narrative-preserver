@@ -49,11 +49,14 @@ export function ProjectLocksDialog({
 
   const save = useMutation({
     mutationFn: async (freeze: boolean) => {
-      const patch: Record<string, unknown> = { ...values };
-      if (freeze) patch.locks_frozen_at = new Date().toISOString();
+      const patch = {
+        ...values,
+        ...(freeze ? { locks_frozen_at: new Date().toISOString() } : {}),
+      };
       const { error } = await supabase.from("projects").update(patch).eq("id", projectId);
       if (error) throw error;
     },
+
     onSuccess: () => {
       qc.invalidateQueries();
       onOpenChange(false);
