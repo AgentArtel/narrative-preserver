@@ -59,6 +59,8 @@ function ProjectHome() {
   const [sceneTitle, setSceneTitle] = useState("");
   const [sceneBrief, setSceneBrief] = useState("");
   const [locksOpen, setLocksOpen] = useState(false);
+  const [vocabOpen, setVocabOpen] = useState(false);
+
 
 
 
