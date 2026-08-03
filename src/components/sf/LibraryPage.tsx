@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Chip, SectionLabel } from "@/components/sf/primitives";
+import { LocationGeography } from "@/components/sf/LocationGeography";
+
 import { uploadImage } from "@/lib/upload";
 import { toast } from "sonner";
 import { Plus, Upload } from "lucide-react";
@@ -162,6 +164,12 @@ export function LibraryPage({
                 <SectionLabel>{selected.name}</SectionLabel>
                 <p className="text-sm text-muted-foreground">{selected.description}</p>
               </div>
+              {table === "locations" && (
+                <LocationGeography
+                  location={selected as { id: string; landmarks?: unknown; blocking_anchor?: string | null }}
+                />
+              )}
+
               <div>
                 <SectionLabel>Reference images</SectionLabel>
                 <div className="grid grid-cols-2 gap-2">

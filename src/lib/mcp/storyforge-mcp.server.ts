@@ -4,8 +4,9 @@
 import type { DB } from "@/lib/generation-package-core";
 import { buildGenerationPackageWith } from "@/lib/generation-package-core";
 import { insertFramesFromUrls } from "@/lib/frames-core";
-import { SHOT_STATUSES, FRAME_KINDS } from "@/lib/storyforge";
+import { SHOT_STATUSES, FRAME_KINDS, SCREEN_SIDES, asLandmarks, LOCK_FIELDS } from "@/lib/storyforge";
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
+
 
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
@@ -212,7 +213,13 @@ export const TOOLS: Tool[] = [
     inputSchema: schema({ project_id: S.string }, ["project_id"]),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
-      const project = await own(ctx, "projects", projectId, "id, title, description, status");
+      const project = await own(
+        ctx,
+        "projects",
+        projectId,
+        "id, title, description, status, style_lock, continuity, direction, locks_frozen_at",
+      );
+
       const [seqs, characters, locations, elements, looks, canon] = await Promise.all([
         ctx.db
           .from("sequences")
@@ -223,7 +230,7 @@ export const TOOLS: Tool[] = [
           .eq("user_id", ctx.userId)
           .order("sort_order"),
         ctx.db.from("characters").select("id, name, role, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("locations").select("id, name, description").eq("project_id", projectId).eq("user_id", ctx.userId),
+        ctx.db.from("locations").select("id, name, description, landmarks, blocking_anchor").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db.from("elements").select("id, name, element_type, description").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db.from("looks").select("id, name, description, palette, prompt_fragments, negative_constraints").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db
@@ -284,6 +291,57 @@ export const TOOLS: Tool[] = [
       return data;
     },
   },
+  {
+    name: "get_locks",
+    description:
+      "Read the three project locks (style lock, continuity, direction) that are emitted verbatim at the top of every generation package.",
+    inputSchema: schema({ project_id: S.string }, ["project_id"]),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      return own(
+        ctx,
+        "projects",
+        projectId,
+        "id, style_lock, continuity, direction, locks_frozen_at",
+      );
+    },
+  },
+  {
+    name: "set_locks",
+    description:
+      "Set one or more project locks. These are re-emitted byte-identically in every prompt; editing them changes every future prompt in the project, and frames approved earlier were made under the previous locks. Pass freeze: true to stamp locks_frozen_at.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        style_lock: S.string,
+        continuity: S.string,
+        direction: S.string,
+        freeze: { type: "boolean" },
+      },
+      ["project_id"],
+    ),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      await own(ctx, "projects", projectId);
+      const patch: Record<string, unknown> = {};
+      for (const f of LOCK_FIELDS) {
+        if (typeof a[f.key] === "string") patch[f.key] = a[f.key];
+      }
+      if (a.freeze === true) patch.locks_frozen_at = new Date().toISOString();
+      if (!Object.keys(patch).length) throw new Error("No lock fields supplied");
+      const { data, error } = await ctx.db
+        .from("projects")
+        .update(patch as never)
+        .eq("id", projectId)
+        .eq("user_id", ctx.userId)
+        .select("id, style_lock, continuity, direction, locks_frozen_at")
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  },
+
+
 
   /* ---------------------------------------------------------- assets */
   {
@@ -308,16 +366,37 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "upsert_location",
-    description: "Create or update a location, matched on project + name.",
-    inputSchema: schema({ project_id: S.string, name: S.string, description: S.string }, [
-      "project_id",
-      "name",
-    ]),
+    description:
+      "Create or update a location, matched on project + name. Landmarks are named world features each fixed to a screen side; the blocking anchor is the single large immovable object all character positions are measured against.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        name: S.string,
+        description: S.string,
+        landmarks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: S.string,
+              side: { type: "string", enum: [...SCREEN_SIDES] },
+            },
+            required: ["name", "side"],
+            additionalProperties: false,
+          },
+        },
+        blocking_anchor: S.string,
+      },
+      ["project_id", "name"],
+    ),
     handler: (ctx, a) =>
       upsertNamed(ctx, "locations", str(a, "project_id"), str(a, "name"), {
         description: optStr(a, "description"),
+        landmarks: a.landmarks === undefined ? null : asLandmarks(a.landmarks),
+        blocking_anchor: optStr(a, "blocking_anchor"),
       }),
   },
+
   {
     name: "upsert_element",
     description: "Create or update an element (prop, effect, creature), matched on project + name.",
