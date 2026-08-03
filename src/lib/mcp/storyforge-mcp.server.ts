@@ -6,11 +6,30 @@ import { buildGenerationPackageWith } from "@/lib/generation-package-core";
 import { insertFramesFromUrls } from "@/lib/frames-core";
 import { SHOT_STATUSES, FRAME_KINDS, SCREEN_SIDES, asLandmarks, LOCK_FIELDS } from "@/lib/storyforge";
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
+import {
+  DEPTH_PLANES,
+  GATES,
+  KEYFRAME_FORMS,
+  asDepthPlanes,
+  asRiskTail,
+  cameraMoveWarnings,
+  isValidProjectCode,
+  keyframeFormWarnings,
+  locationLockState,
+  mergeVocab,
+  riskTailWarnings,
+  type CameraMoveRow,
+  type KeyframeForm,
+  type RiskClassRow,
+} from "@/lib/craft";
 
 
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
 const OWNER_TYPES = ["characters", "locations", "elements", "shots"] as const;
+const LOCATION_SELECT =
+  "id, name, description, landmarks, blocking_anchor, light_logic, materials, depth_planes, master_frame_id, reverse_frame_id, reverse_verified_at, reverse_verification_notes, motion_test_frame_id, motion_test_notes";
+
 
 export const PROTOCOL_VERSION = "2025-06-18";
 
