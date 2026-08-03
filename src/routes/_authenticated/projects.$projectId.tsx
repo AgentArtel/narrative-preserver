@@ -80,6 +80,8 @@ function ProjectLayout() {
           <span className="text-sm font-semibold tracking-tight">
             {project?.title ?? "Loading…"}
           </span>
+          <ProjectCodeAndGate projectId={projectId} project={project} />
+
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             {NAV.map((n) => (
               <Link
