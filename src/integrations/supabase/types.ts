@@ -343,25 +343,31 @@ export type Database = {
       }
       locations: {
         Row: {
+          blocking_anchor: string | null
           created_at: string
           description: string | null
           id: string
+          landmarks: Json
           name: string
           project_id: string
           user_id: string
         }
         Insert: {
+          blocking_anchor?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          landmarks?: Json
           name: string
           project_id: string
           user_id: string
         }
         Update: {
+          blocking_anchor?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          landmarks?: Json
           name?: string
           project_id?: string
           user_id?: string
@@ -422,28 +428,40 @@ export type Database = {
       }
       projects: {
         Row: {
+          continuity: string | null
           created_at: string
           description: string | null
+          direction: string | null
           id: string
+          locks_frozen_at: string | null
           status: string
+          style_lock: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          continuity?: string | null
           created_at?: string
           description?: string | null
+          direction?: string | null
           id?: string
+          locks_frozen_at?: string | null
           status?: string
+          style_lock?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          continuity?: string | null
           created_at?: string
           description?: string | null
+          direction?: string | null
           id?: string
+          locks_frozen_at?: string | null
           status?: string
+          style_lock?: string | null
           title?: string
           updated_at?: string
           user_id?: string
