@@ -88,7 +88,7 @@ export function LocationLocks({ location }: { location: LocationLockRow }) {
 
   async function update(patch: Record<string, unknown>, message: string) {
     setSaving(true);
-    const { error } = await supabase.from("locations").update(patch).eq("id", location.id);
+    const { error } = await supabase.from("locations").update(patch as never).eq("id", location.id);
     setSaving(false);
     if (error) return toast.error(error.message);
     qc.invalidateQueries();

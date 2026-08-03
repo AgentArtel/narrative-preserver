@@ -70,7 +70,7 @@ export function KeyframePairs({
   }
 
   async function patchPair(id: string, patch: Record<string, unknown>) {
-    const { error } = await supabase.from("keyframe_pairs").update(patch).eq("id", id);
+    const { error } = await supabase.from("keyframe_pairs").update(patch as never).eq("id", id);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["keyframe-pairs", shotId] });
   }
