@@ -51,7 +51,7 @@
       {
         "name": "get_project_overview",
         "title": "get_project_overview",
-        "description": "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",
+        "description": "Full orientation for one project: gate, code, locks, the sequence → scene → shot tree, cast, locations with five-lock readiness, elements, looks, the project's camera-move and risk-class vocabularies, and canon count.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",

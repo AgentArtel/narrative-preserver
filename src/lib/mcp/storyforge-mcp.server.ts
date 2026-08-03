@@ -243,7 +243,7 @@ export const TOOLS: Tool[] = [
   {
     name: "get_project_overview",
     description:
-      "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",
+      "Full orientation for one project: gate, code, locks, the sequence → scene → shot tree, cast, locations with five-lock readiness, elements, looks, the project's camera-move and risk-class vocabularies, and canon count.",
     inputSchema: schema({ project_id: S.string }, ["project_id"]),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
@@ -251,20 +251,20 @@ export const TOOLS: Tool[] = [
         ctx,
         "projects",
         projectId,
-        "id, title, description, status, style_lock, continuity, direction, locks_frozen_at",
+        "id, title, description, status, gate, code, style_lock, continuity, direction, locks_frozen_at",
       );
 
-      const [seqs, characters, locations, elements, looks, canon] = await Promise.all([
+      const [seqs, characters, locations, elements, looks, canon, moves, risks] = await Promise.all([
         ctx.db
           .from("sequences")
           .select(
-            "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order))",
+            "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order, risk_tail))",
           )
           .eq("project_id", projectId)
           .eq("user_id", ctx.userId)
           .order("sort_order"),
         ctx.db.from("characters").select("id, name, role, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("locations").select("id, name, description, landmarks, blocking_anchor").eq("project_id", projectId).eq("user_id", ctx.userId),
+        ctx.db.from("locations").select(LOCATION_SELECT).eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db.from("elements").select("id, name, element_type, description").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db.from("looks").select("id, name, description, palette, prompt_fragments, negative_constraints").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db
@@ -272,18 +272,26 @@ export const TOOLS: Tool[] = [
           .select("id", { count: "exact", head: true })
           .eq("project_id", projectId)
           .eq("user_id", ctx.userId),
+        ctx.db.from("camera_moves").select("*").or(`project_id.is.null,project_id.eq.${projectId}`),
+        ctx.db.from("risk_classes").select("*").or(`project_id.is.null,project_id.eq.${projectId}`),
       ]);
       return {
         project,
         sequences: seqs.data ?? [],
         characters: characters.data ?? [],
-        locations: locations.data ?? [],
+        locations: (locations.data ?? []).map((l) => ({
+          ...l,
+          lock_state: locationLockState(l as never),
+        })),
         elements: elements.data ?? [],
         looks: looks.data ?? [],
+        camera_moves: mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]),
+        risk_classes: mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
         canon_count: canon.count ?? 0,
       };
     },
   },
+
   {
     name: "get_context_package",
     description:
