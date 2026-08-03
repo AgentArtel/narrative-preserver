@@ -230,7 +230,7 @@ export const TOOLS: Tool[] = [
           .eq("user_id", ctx.userId)
           .order("sort_order"),
         ctx.db.from("characters").select("id, name, role, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("locations").select("id, name, description").eq("project_id", projectId).eq("user_id", ctx.userId),
+        ctx.db.from("locations").select("id, name, description, landmarks, blocking_anchor").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db.from("elements").select("id, name, element_type, description").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db.from("looks").select("id, name, description, palette, prompt_fragments, negative_constraints").eq("project_id", projectId).eq("user_id", ctx.userId),
         ctx.db
