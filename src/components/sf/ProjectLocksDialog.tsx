@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { LOCK_FIELDS, type LockKey } from "@/lib/storyforge";
+import { LOCK_FIELDS, STYLE_LOOK_BOUNDARY, type LockKey } from "@/lib/storyforge";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 
@@ -92,6 +92,9 @@ export function ProjectLocksDialog({
             <div key={f.key} className="space-y-1.5">
               <Label htmlFor={`lock-${f.key}`}>{f.label}</Label>
               <p className="text-xs text-muted-foreground">{f.hint}</p>
+              {f.key === "style_lock" && (
+                <p className="text-xs text-muted-foreground/80">{STYLE_LOOK_BOUNDARY}</p>
+              )}
               <Textarea
                 id={`lock-${f.key}`}
                 rows={7}

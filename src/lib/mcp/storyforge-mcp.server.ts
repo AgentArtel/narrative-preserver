@@ -207,6 +207,21 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: "create_project",
+    description:
+      "Create a new StoryForge project. Locks are set afterwards with set_locks; structure with create_sequence.",
+    inputSchema: schema({ title: S.string, description: S.string }, ["title"]),
+    handler: async (ctx, a) => {
+      const row = await insertRow(
+        ctx,
+        "projects",
+        { title: str(a, "title"), description: optStr(a, "description") },
+        "id, title, status",
+      );
+      return row;
+    },
+  },
+  {
     name: "get_project_overview",
     description:
       "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",

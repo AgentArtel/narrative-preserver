@@ -247,6 +247,59 @@ export async function buildGenerationPackageWith(
     ]),
   );
 
+  // Provider Elements: what the operator must attach in the generation tool
+  // before rendering. Named identities are how character and location identity
+  // carries from one shot to the next.
+  const identityOwnerIds = [...charIds, ...elIds, ...(shot.location_id ? [shot.location_id] : []), shot.id];
+  const { data: identities } = await supabase
+    .from("provider_identities")
+    .select("provider, capability, external_id, owner_type, owner_id, status")
+    .eq("status", "active")
+    .in("owner_id", identityOwnerIds);
+
+  const OWNER_LABEL: Record<string, string> = {
+    characters: "character",
+    locations: "location",
+    elements: "element",
+    shots: "shot",
+  };
+
+  const providerElements = (identities ?? [])
+    .map((pi) => ({
+      provider: pi.provider,
+      owner_type: OWNER_LABEL[pi.owner_type] ?? pi.owner_type,
+      owner_name:
+        pi.owner_id === shot.id
+          ? `Shot ${shot.shot_number}`
+          : (nameById.get(pi.owner_id) ?? "Unknown"),
+      capability: pi.capability ?? "—",
+      external_id: pi.external_id,
+    }))
+    .sort(
+      (a, b) =>
+        a.provider.localeCompare(b.provider) ||
+        a.owner_type.localeCompare(b.owner_type) ||
+        a.owner_name.localeCompare(b.owner_name) ||
+        a.external_id.localeCompare(b.external_id),
+    );
+
+  if (providerElements.length) {
+    const peLines: string[] = [];
+    let currentProvider: string | null = null;
+    for (const pe of providerElements) {
+      if (pe.provider !== currentProvider) {
+        currentProvider = pe.provider;
+        peLines.push(`${currentProvider}:`);
+      }
+      peLines.push(
+        `- ${pe.owner_name} (${pe.owner_type}) — ${pe.capability}: ${pe.external_id}`,
+      );
+    }
+    lines.push(
+      block("PROVIDER ELEMENTS — attach these in the generation tool before rendering", peLines),
+    );
+  }
+
   const negatives = look?.negative_constraints ?? [];
   lines.push(block("NEGATIVE CONSTRAINTS", negatives.length ? negatives : ["—"]));
 
@@ -262,6 +315,7 @@ export async function buildGenerationPackageWith(
       palette: palette.map((p) => p.hex),
       previous_approved_frame: prevApproved ?? null,
       reference_images: [...assetRefs, ...refs],
+      provider_elements: providerElements,
       canon_records_applied: (canon ?? []).length,
     },
   };

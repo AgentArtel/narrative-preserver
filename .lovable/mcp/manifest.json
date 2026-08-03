@@ -28,6 +28,27 @@
         "outputSchema": null
       },
       {
+        "name": "create_project",
+        "title": "create_project",
+        "description": "Create a new StoryForge project. Locks are set afterwards with set_locks; structure with create_sequence.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
         "name": "get_project_overview",
         "title": "get_project_overview",
         "description": "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",
