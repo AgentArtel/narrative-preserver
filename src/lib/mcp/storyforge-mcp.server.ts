@@ -308,16 +308,37 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "upsert_location",
-    description: "Create or update a location, matched on project + name.",
-    inputSchema: schema({ project_id: S.string, name: S.string, description: S.string }, [
-      "project_id",
-      "name",
-    ]),
+    description:
+      "Create or update a location, matched on project + name. Landmarks are named world features each fixed to a screen side; the blocking anchor is the single large immovable object all character positions are measured against.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        name: S.string,
+        description: S.string,
+        landmarks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: S.string,
+              side: { type: "string", enum: [...SCREEN_SIDES] },
+            },
+            required: ["name", "side"],
+            additionalProperties: false,
+          },
+        },
+        blocking_anchor: S.string,
+      },
+      ["project_id", "name"],
+    ),
     handler: (ctx, a) =>
       upsertNamed(ctx, "locations", str(a, "project_id"), str(a, "name"), {
         description: optStr(a, "description"),
+        landmarks: a.landmarks === undefined ? null : asLandmarks(a.landmarks),
+        blocking_anchor: optStr(a, "blocking_anchor"),
       }),
   },
+
   {
     name: "upsert_element",
     description: "Create or update an element (prop, effect, creature), matched on project + name.",
