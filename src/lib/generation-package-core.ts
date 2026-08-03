@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { asLandmarks, asPalette, asRecord, LOCK_FIELDS, type Camera } from "./storyforge";
+import { asDepthPlanes } from "./craft";
 
 export type DB = SupabaseClient<Database>;
 
