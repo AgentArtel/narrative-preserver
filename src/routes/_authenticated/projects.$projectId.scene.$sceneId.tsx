@@ -690,6 +690,18 @@ function SceneWorkspace() {
                     ))}
                   </SelectContent>
                 </Select>
+                {(() => {
+                  const loc = (library?.locations ?? []).find((l) => l.id === selected.location_id);
+                  if (!loc || locationLockState(loc).plateLocked) return null;
+                  return (
+                    <p className="flex gap-1.5 text-[11px] text-primary">
+                      <AlertTriangle className="mt-px size-3.5 shrink-0" />
+                      {loc.name} is not plate locked — fill the five locks and verify the reverse
+                      angle.
+                    </p>
+                  );
+                })()}
+
                 <Input
                   placeholder="state — lighting: torchlit, condition: ruined"
                   defaultValue={Object.entries(asRecord(selected.location_state))
