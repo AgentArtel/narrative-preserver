@@ -213,7 +213,13 @@ export const TOOLS: Tool[] = [
     inputSchema: schema({ project_id: S.string }, ["project_id"]),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
-      const project = await own(ctx, "projects", projectId, "id, title, description, status");
+      const project = await own(
+        ctx,
+        "projects",
+        projectId,
+        "id, title, description, status, style_lock, continuity, direction, locks_frozen_at",
+      );
+
       const [seqs, characters, locations, elements, looks, canon] = await Promise.all([
         ctx.db
           .from("sequences")
