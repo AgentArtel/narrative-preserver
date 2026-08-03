@@ -28,7 +28,7 @@ const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "sce
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
 const OWNER_TYPES = ["characters", "locations", "elements", "shots"] as const;
 const LOCATION_SELECT =
-  "id, name, description, landmarks, blocking_anchor, light_logic, materials, depth_planes, master_frame_id, reverse_frame_id, reverse_verified_at, reverse_verification_notes, motion_test_frame_id, motion_test_notes";
+  "id, name, description, landmarks, blocking_anchor, light_logic, materials, depth_planes, master_frame_id, reverse_frame_id, reverse_verified_at, reverse_verification_note, motion_test_frame_id, motion_test_passed_at, motion_test_note";
 
 
 export const PROTOCOL_VERSION = "2025-06-18";
