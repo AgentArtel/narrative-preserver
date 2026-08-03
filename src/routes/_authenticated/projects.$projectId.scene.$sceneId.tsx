@@ -122,6 +122,9 @@ function SceneWorkspace() {
     },
   });
 
+  const { data: vocab } = useVocabularies(projectId);
+
+
   useEffect(() => {
     if (!selectedShotId && shots?.length) setSelectedShotId(shots[0].id);
   }, [shots, selectedShotId]);
