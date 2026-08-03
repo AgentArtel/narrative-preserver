@@ -92,6 +92,9 @@ export function ProjectLocksDialog({
             <div key={f.key} className="space-y-1.5">
               <Label htmlFor={`lock-${f.key}`}>{f.label}</Label>
               <p className="text-xs text-muted-foreground">{f.hint}</p>
+              {f.key === "style_lock" && (
+                <p className="text-xs text-muted-foreground/80">{STYLE_LOOK_BOUNDARY}</p>
+              )}
               <Textarea
                 id={`lock-${f.key}`}
                 rows={7}
