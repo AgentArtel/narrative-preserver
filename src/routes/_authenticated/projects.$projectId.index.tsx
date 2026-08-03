@@ -202,9 +202,15 @@ function ProjectHome() {
               generation package in this project.
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setLocksOpen(true)}>
-            <LockIcon className="size-4" /> {locksSet ? "Edit locks" : "Set locks"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setVocabOpen(true)}>
+              <ListTree className="size-4" /> Vocabularies
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setLocksOpen(true)}>
+              <LockIcon className="size-4" /> {locksSet ? "Edit locks" : "Set locks"}
+            </Button>
+          </div>
+
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           {LOCK_FIELDS.map((f) => {
