@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { GATES, PROJECT_CODE_HINT, isValidProjectCode } from "@/lib/craft";
 import { toast } from "sonner";
+import { LogOut } from "lucide-react";
+
 
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
