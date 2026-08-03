@@ -593,7 +593,11 @@ function SceneWorkspace() {
                     </SelectContent>
                   </Select>
                 </div>
+                {selected.status === "held_still" && (
+                  <p className="text-[11px] text-muted-foreground">{HELD_STILL_HINT}</p>
+                )}
               </div>
+
 
               <div className="space-y-2">
                 <SectionLabel>Camera</SectionLabel>
