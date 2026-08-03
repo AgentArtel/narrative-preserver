@@ -57,6 +57,7 @@ function ProjectHome() {
   const [sceneFor, setSceneFor] = useState<string | null>(null);
   const [sceneTitle, setSceneTitle] = useState("");
   const [sceneBrief, setSceneBrief] = useState("");
+  const [locksOpen, setLocksOpen] = useState(false);
 
 
 
@@ -126,6 +127,9 @@ function ProjectHome() {
   });
 
   const pending = (data?.shots ?? []).filter((s) => s.status === "candidates");
+  const locksSet = LOCK_FIELDS.some(
+    (f) => !!(data?.project as Record<string, unknown> | undefined)?.[f.key],
+  );
 
   const createSequence = useMutation({
     mutationFn: async () => {
@@ -199,7 +203,7 @@ function ProjectHome() {
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={() => setLocksOpen(true)}>
-            <Lock className="size-4" /> {lockCount ? "Edit locks" : "Set locks"}
+            <LockIcon className="size-4" /> {locksSet ? "Edit locks" : "Set locks"}
           </Button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
