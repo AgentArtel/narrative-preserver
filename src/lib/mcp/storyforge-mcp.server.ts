@@ -4,8 +4,9 @@
 import type { DB } from "@/lib/generation-package-core";
 import { buildGenerationPackageWith } from "@/lib/generation-package-core";
 import { insertFramesFromUrls } from "@/lib/frames-core";
-import { SHOT_STATUSES, FRAME_KINDS } from "@/lib/storyforge";
+import { SHOT_STATUSES, FRAME_KINDS, SCREEN_SIDES, asLandmarks, LOCK_FIELDS } from "@/lib/storyforge";
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
+
 
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
