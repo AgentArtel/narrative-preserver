@@ -117,7 +117,7 @@ export function asRiskTail(value: unknown): RiskEntry[] {
         class: String(raw.class ?? ""),
         prediction: String(raw.prediction ?? ""),
         fallback: String(raw.fallback ?? ""),
-        occurred: occurred === "yes" || occurred === "no" ? occurred : null,
+        occurred: (occurred === "yes" || occurred === "no" ? occurred : null) as RiskOccurred,
       };
     })
     .filter((e) => e.class || e.prediction || e.fallback);
