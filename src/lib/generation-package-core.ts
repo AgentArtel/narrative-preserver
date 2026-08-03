@@ -104,6 +104,18 @@ export async function buildGenerationPackageWith(
   lines.push(`GENERATION PACKAGE — ${project?.title ?? "Project"} / Shot ${shot.shot_number}`);
   lines.push("");
 
+  // Project locks, verbatim and first — identical in every prompt of this project.
+  for (const f of LOCK_FIELDS) {
+    lines.push(
+      verbatimLock(
+        f.label.toUpperCase(),
+        (project as Record<string, unknown> | undefined)?.[f.key] as string | null | undefined,
+      ),
+    );
+  }
+
+
+
   lines.push(
     block("SCENE", [
       `Sequence: ${scene?.sequences?.title ?? "—"}`,
