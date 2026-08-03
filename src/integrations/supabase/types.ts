@@ -114,6 +114,59 @@ export type Database = {
           },
         ]
       }
+      camera_moves: {
+        Row: {
+          created_at: string
+          description: string | null
+          hidden: boolean
+          id: string
+          implies_motion: boolean
+          is_time_move: boolean
+          label: string
+          project_id: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          implies_motion?: boolean
+          is_time_move?: boolean
+          label: string
+          project_id?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          implies_motion?: boolean
+          is_time_move?: boolean
+          label?: string
+          project_id?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "camera_moves_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canon_records: {
         Row: {
           aspect: string
@@ -341,43 +394,152 @@ export type Database = {
           },
         ]
       }
+      keyframe_pairs: {
+        Row: {
+          a_frame_id: string | null
+          b_frame_id: string | null
+          created_at: string
+          form: string | null
+          id: string
+          notes: string | null
+          shot_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          a_frame_id?: string | null
+          b_frame_id?: string | null
+          created_at?: string
+          form?: string | null
+          id?: string
+          notes?: string | null
+          shot_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          a_frame_id?: string | null
+          b_frame_id?: string | null
+          created_at?: string
+          form?: string | null
+          id?: string
+          notes?: string | null
+          shot_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "keyframe_pairs_a_frame_id_fkey"
+            columns: ["a_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "keyframe_pairs_b_frame_id_fkey"
+            columns: ["b_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "keyframe_pairs_shot_id_fkey"
+            columns: ["shot_id"]
+            isOneToOne: false
+            referencedRelation: "shots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           blocking_anchor: string | null
           created_at: string
+          depth_planes: Json
           description: string | null
           id: string
           landmarks: Json
+          light_logic: string | null
+          master_frame_id: string | null
+          materials: string | null
+          motion_test_frame_id: string | null
+          motion_test_note: string | null
+          motion_test_passed_at: string | null
           name: string
           project_id: string
+          reverse_frame_id: string | null
+          reverse_verification_note: string | null
+          reverse_verified_at: string | null
           user_id: string
         }
         Insert: {
           blocking_anchor?: string | null
           created_at?: string
+          depth_planes?: Json
           description?: string | null
           id?: string
           landmarks?: Json
+          light_logic?: string | null
+          master_frame_id?: string | null
+          materials?: string | null
+          motion_test_frame_id?: string | null
+          motion_test_note?: string | null
+          motion_test_passed_at?: string | null
           name: string
           project_id: string
+          reverse_frame_id?: string | null
+          reverse_verification_note?: string | null
+          reverse_verified_at?: string | null
           user_id: string
         }
         Update: {
           blocking_anchor?: string | null
           created_at?: string
+          depth_planes?: Json
           description?: string | null
           id?: string
           landmarks?: Json
+          light_logic?: string | null
+          master_frame_id?: string | null
+          materials?: string | null
+          motion_test_frame_id?: string | null
+          motion_test_note?: string | null
+          motion_test_passed_at?: string | null
           name?: string
           project_id?: string
+          reverse_frame_id?: string | null
+          reverse_verification_note?: string | null
+          reverse_verified_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "locations_master_frame_id_fkey"
+            columns: ["master_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_motion_test_frame_id_fkey"
+            columns: ["motion_test_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "locations_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_reverse_frame_id_fkey"
+            columns: ["reverse_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
             referencedColumns: ["id"]
           },
         ]
@@ -428,10 +590,12 @@ export type Database = {
       }
       projects: {
         Row: {
+          code: string | null
           continuity: string | null
           created_at: string
           description: string | null
           direction: string | null
+          gate: string
           id: string
           locks_frozen_at: string | null
           status: string
@@ -441,10 +605,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          code?: string | null
           continuity?: string | null
           created_at?: string
           description?: string | null
           direction?: string | null
+          gate?: string
           id?: string
           locks_frozen_at?: string | null
           status?: string
@@ -454,10 +620,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          code?: string | null
           continuity?: string | null
           created_at?: string
           description?: string | null
           direction?: string | null
+          gate?: string
           id?: string
           locks_frozen_at?: string | null
           status?: string
@@ -541,6 +709,56 @@ export type Database = {
             columns: ["reference_id"]
             isOneToOne: false
             referencedRelation: "asset_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_classes: {
+        Row: {
+          created_at: string
+          description: string | null
+          guidance: string | null
+          hidden: boolean
+          id: string
+          label: string
+          project_id: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          guidance?: string | null
+          hidden?: boolean
+          id?: string
+          label: string
+          project_id?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          guidance?: string | null
+          hidden?: boolean
+          id?: string
+          label?: string
+          project_id?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_classes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -711,6 +929,7 @@ export type Database = {
           location_id: string | null
           location_state: Json
           look_id: string | null
+          risk_tail: Json
           scene_id: string
           shot_number: string
           sort_order: number
@@ -729,6 +948,7 @@ export type Database = {
           location_id?: string | null
           location_state?: Json
           look_id?: string | null
+          risk_tail?: Json
           scene_id: string
           shot_number: string
           sort_order?: number
@@ -747,6 +967,7 @@ export type Database = {
           location_id?: string | null
           location_state?: Json
           look_id?: string | null
+          risk_tail?: Json
           scene_id?: string
           shot_number?: string
           sort_order?: number
@@ -811,6 +1032,7 @@ export type Database = {
         | "revision"
         | "approved"
         | "final"
+        | "held_still"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -957,6 +1179,7 @@ export const Constants = {
         "revision",
         "approved",
         "final",
+        "held_still",
       ],
     },
   },
