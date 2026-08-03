@@ -4,13 +4,34 @@
 import type { DB } from "@/lib/generation-package-core";
 import { buildGenerationPackageWith } from "@/lib/generation-package-core";
 import { insertFramesFromUrls } from "@/lib/frames-core";
-import { SHOT_STATUSES, FRAME_KINDS, SCREEN_SIDES, asLandmarks, LOCK_FIELDS } from "@/lib/storyforge";
+import {
+  SHOT_STATUSES,
+  FRAME_KINDS,
+  SCREEN_SIDES,
+  asLandmarks,
+  LOCK_FIELDS,
+} from "@/lib/storyforge";
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
-
+import {
+  DEPTH_PLANES,
+  KEYFRAME_FORMS,
+  asDepthPlanes,
+  asRiskTail,
+  cameraMoveWarnings,
+  keyframeFormWarnings,
+  locationLockState,
+  mergeVocab,
+  riskTailWarnings,
+  type CameraMoveRow,
+  type KeyframeForm,
+  type RiskClassRow,
+} from "@/lib/craft";
 
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
 const OWNER_TYPES = ["characters", "locations", "elements", "shots"] as const;
+const LOCATION_SELECT =
+  "id, name, description, landmarks, blocking_anchor, light_logic, materials, depth_planes, master_frame_id, reverse_frame_id, reverse_verified_at, reverse_verification_note, motion_test_frame_id, motion_test_passed_at, motion_test_note";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 
@@ -77,7 +98,12 @@ function oneOf<T extends string>(value: string, allowed: readonly T[], label: st
 }
 
 /** Verifies a referenced row belongs to the authenticated user. */
-async function own(ctx: Ctx, table: string, id: string, select = "id"): Promise<Record<string, unknown>> {
+async function own(
+  ctx: Ctx,
+  table: string,
+  id: string,
+  select = "id",
+): Promise<Record<string, unknown>> {
   const { data, error } = await ctx.db
     .from(table as never)
     .select(select)
@@ -141,7 +167,9 @@ async function upsertNamed(
     .eq("user_id", ctx.userId)
     .eq("name", name)
     .maybeSingle();
-  const patch = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== null));
+  const patch = Object.fromEntries(
+    Object.entries(fields).filter(([, v]) => v !== undefined && v !== null),
+  );
   if (existing) {
     const id = (existing as { id: string }).id;
     if (Object.keys(patch).length) {
@@ -189,7 +217,37 @@ const UPDATABLE_SHOT_KEYS = [
   "status",
   "beat_id",
   "shot_number",
+  "risk_tail",
 ] as const;
+
+/**
+ * The same warnings the editor shows, returned to the agent. Risk text is
+ * app-only: it is never emitted into a generation package.
+ */
+async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
+  const { data: shot } = await ctx.db
+    .from("shots")
+    .select("camera, risk_tail, scenes(sequences(project_id))")
+    .eq("id", shotId)
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+  if (!shot) return [];
+  const projectId = (shot as { scenes?: { sequences?: { project_id?: string } } }).scenes?.sequences
+    ?.project_id;
+  const filter = projectId ? `project_id.is.null,project_id.eq.${projectId}` : "project_id.is.null";
+  const [moves, risks] = await Promise.all([
+    ctx.db.from("camera_moves").select("*").or(filter),
+    ctx.db.from("risk_classes").select("*").or(filter),
+  ]);
+  const movement = ((shot.camera ?? {}) as { movement?: string }).movement;
+  return [
+    ...cameraMoveWarnings(movement, mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[])),
+    ...riskTailWarnings(
+      asRiskTail(shot.risk_tail),
+      mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
+    ),
+  ];
+}
 
 export const TOOLS: Tool[] = [
   {
@@ -224,7 +282,7 @@ export const TOOLS: Tool[] = [
   {
     name: "get_project_overview",
     description:
-      "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",
+      "Full orientation for one project: gate, code, locks, the sequence → scene → shot tree, cast, locations with five-lock readiness, elements, looks, the project's camera-move and risk-class vocabularies, and canon count.",
     inputSchema: schema({ project_id: S.string }, ["project_id"]),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
@@ -232,39 +290,71 @@ export const TOOLS: Tool[] = [
         ctx,
         "projects",
         projectId,
-        "id, title, description, status, style_lock, continuity, direction, locks_frozen_at",
+        "id, title, description, status, gate, code, style_lock, continuity, direction, locks_frozen_at",
       );
 
-      const [seqs, characters, locations, elements, looks, canon] = await Promise.all([
-        ctx.db
-          .from("sequences")
-          .select(
-            "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order))",
-          )
-          .eq("project_id", projectId)
-          .eq("user_id", ctx.userId)
-          .order("sort_order"),
-        ctx.db.from("characters").select("id, name, role, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("locations").select("id, name, description, landmarks, blocking_anchor").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("elements").select("id, name, element_type, description").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db.from("looks").select("id, name, description, palette, prompt_fragments, negative_constraints").eq("project_id", projectId).eq("user_id", ctx.userId),
-        ctx.db
-          .from("canon_records")
-          .select("id", { count: "exact", head: true })
-          .eq("project_id", projectId)
-          .eq("user_id", ctx.userId),
-      ]);
+      const [seqs, characters, locations, elements, looks, canon, moves, risks] = await Promise.all(
+        [
+          ctx.db
+            .from("sequences")
+            .select(
+              "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order, risk_tail))",
+            )
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId)
+            .order("sort_order"),
+          ctx.db
+            .from("characters")
+            .select("id, name, role, description")
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("locations")
+            .select(LOCATION_SELECT)
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("elements")
+            .select("id, name, element_type, description")
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("looks")
+            .select("id, name, description, palette, prompt_fragments, negative_constraints")
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("canon_records")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", projectId)
+            .eq("user_id", ctx.userId),
+          ctx.db
+            .from("camera_moves")
+            .select("*")
+            .or(`project_id.is.null,project_id.eq.${projectId}`),
+          ctx.db
+            .from("risk_classes")
+            .select("*")
+            .or(`project_id.is.null,project_id.eq.${projectId}`),
+        ],
+      );
       return {
         project,
         sequences: seqs.data ?? [],
         characters: characters.data ?? [],
-        locations: locations.data ?? [],
+        locations: (locations.data ?? []).map((l) => ({
+          ...l,
+          lock_state: locationLockState(l as never),
+        })),
         elements: elements.data ?? [],
         looks: looks.data ?? [],
+        camera_moves: mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]),
+        risk_classes: mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
         canon_count: canon.count ?? 0,
       };
     },
   },
+
   {
     name: "get_context_package",
     description:
@@ -285,10 +375,9 @@ export const TOOLS: Tool[] = [
   {
     name: "list_canon",
     description: "List canon records for a project, optionally filtered by subject.",
-    inputSchema: schema(
-      { project_id: S.string, subject_type: S.string, subject_id: S.string },
-      ["project_id"],
-    ),
+    inputSchema: schema({ project_id: S.string, subject_type: S.string, subject_id: S.string }, [
+      "project_id",
+    ]),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
       await own(ctx, "projects", projectId);
@@ -356,8 +445,6 @@ export const TOOLS: Tool[] = [
     },
   },
 
-
-
   /* ---------------------------------------------------------- assets */
   {
     name: "upsert_character",
@@ -382,7 +469,7 @@ export const TOOLS: Tool[] = [
   {
     name: "upsert_location",
     description:
-      "Create or update a location, matched on project + name. Landmarks are named world features each fixed to a screen side; the blocking anchor is the single large immovable object all character positions are measured against.",
+      "Create or update a location, matched on project + name. Carries the five locks: geography (landmarks fixed to a screen side plus the single immovable blocking anchor), light logic, materials and depth planes. A plate is not locked until its reverse angle has been generated separately and verified — see stamp_location_verification.",
     inputSchema: schema(
       {
         project_id: S.string,
@@ -401,15 +488,91 @@ export const TOOLS: Tool[] = [
           },
         },
         blocking_anchor: S.string,
+        light_logic: S.string,
+        materials: S.string,
+        depth_planes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              plane: { type: "string", enum: [...DEPTH_PLANES] },
+              contents: S.string,
+            },
+            required: ["plane", "contents"],
+            additionalProperties: false,
+          },
+        },
       },
       ["project_id", "name"],
     ),
-    handler: (ctx, a) =>
-      upsertNamed(ctx, "locations", str(a, "project_id"), str(a, "name"), {
+    handler: async (ctx, a) => {
+      const row = (await upsertNamed(ctx, "locations", str(a, "project_id"), str(a, "name"), {
         description: optStr(a, "description"),
         landmarks: a.landmarks === undefined ? null : asLandmarks(a.landmarks),
         blocking_anchor: optStr(a, "blocking_anchor"),
-      }),
+        light_logic: optStr(a, "light_logic"),
+        materials: optStr(a, "materials"),
+        depth_planes: a.depth_planes === undefined ? null : asDepthPlanes(a.depth_planes),
+      })) as Record<string, unknown>;
+      const id = String(row.id ?? row.location_id ?? "");
+      const { data: fresh } = await ctx.db
+        .from("locations")
+        .select(LOCATION_SELECT)
+        .eq("id", id)
+        .eq("user_id", ctx.userId)
+        .maybeSingle();
+      return { ...row, lock_state: locationLockState(fresh as never) };
+    },
+  },
+  {
+    name: "stamp_location_verification",
+    description:
+      "Record the master and reverse plates for a location and stamp verification. Screen-left becomes screen-right the moment the camera turns, so the reverse angle must be generated separately and checked against the geography before the plate is treated as locked. The motion test stamps that the plate survives a camera move.",
+    inputSchema: schema(
+      {
+        location_id: S.string,
+        master_frame_id: S.string,
+        reverse_frame_id: S.string,
+        reverse_verified: { type: "boolean" },
+        reverse_verification_note: S.string,
+        motion_test_frame_id: S.string,
+        motion_test_passed: { type: "boolean" },
+        motion_test_note: S.string,
+      },
+      ["location_id"],
+    ),
+    handler: async (ctx, a) => {
+      const locationId = str(a, "location_id");
+      await own(ctx, "locations", locationId);
+      const patch: Record<string, unknown> = {};
+      for (const key of ["master_frame_id", "reverse_frame_id", "motion_test_frame_id"] as const) {
+        const frameId = optStr(a, key);
+        if (frameId) {
+          await own(ctx, "frames", frameId);
+          patch[key] = frameId;
+        }
+      }
+      const note = optStr(a, "reverse_verification_note");
+      if (note !== null) patch.reverse_verification_note = note;
+      const motionNote = optStr(a, "motion_test_note");
+      if (motionNote !== null) patch.motion_test_note = motionNote;
+      if (typeof a.reverse_verified === "boolean") {
+        patch.reverse_verified_at = a.reverse_verified ? new Date().toISOString() : null;
+      }
+      if (typeof a.motion_test_passed === "boolean") {
+        patch.motion_test_passed_at = a.motion_test_passed ? new Date().toISOString() : null;
+      }
+      if (!Object.keys(patch).length) throw new Error("Nothing to stamp");
+      const { data, error } = await ctx.db
+        .from("locations")
+        .update(patch as never)
+        .eq("id", locationId)
+        .eq("user_id", ctx.userId)
+        .select(LOCATION_SELECT)
+        .single();
+      if (error) throw new Error(error.message);
+      return { ...data, lock_state: locationLockState(data as never) };
+    },
   },
 
   {
@@ -489,7 +652,12 @@ export const TOOLS: Tool[] = [
         { reference_id: ref.id, owner_type: ownerType, owner_id: ownerId, role },
         "id",
       );
-      return { reference_id: ref.id, reference_link_id: link.id, owner_type: ownerType, owner_id: ownerId };
+      return {
+        reference_id: ref.id,
+        reference_link_id: link.id,
+        owner_type: ownerType,
+        owner_id: ownerId,
+      };
     },
   },
   {
@@ -605,7 +773,8 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "create_shot",
-    description: "Create a shot in a scene, appended at the end with status 'idea'.",
+    description:
+      "Create a shot in a scene, appended at the end with status 'idea'. camera.movement should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
     inputSchema: schema(
       {
         scene_id: S.string,
@@ -618,6 +787,20 @@ export const TOOLS: Tool[] = [
         location_id: S.string,
         location_state: S.object,
         look_id: S.string,
+        risk_tail: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              risk_class: S.string,
+              prediction: S.string,
+              fallback: S.string,
+              occurred: { type: "string", enum: ["yes", "no"] },
+            },
+            required: ["risk_class"],
+            additionalProperties: false,
+          },
+        },
       },
       ["scene_id", "description"],
     ),
@@ -645,18 +828,19 @@ export const TOOLS: Tool[] = [
           location_id: locationId,
           location_state: optObj(a, "location_state") ?? {},
           look_id: lookId,
+          risk_tail: a.risk_tail === undefined ? [] : asRiskTail(a.risk_tail),
           status: "idea",
           sort_order: order,
         },
         "id",
       );
-      return { shot_id: row.id };
+      return { shot_id: row.id, warnings: await shotCraftWarnings(ctx, row.id as string) };
     },
   },
   {
     name: "update_shot",
     description:
-      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number.",
+      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
     inputSchema: schema({ shot_id: S.string, patch: S.object }, ["shot_id", "patch"]),
     handler: async (ctx, a) => {
       const shotId = str(a, "shot_id");
@@ -671,6 +855,7 @@ export const TOOLS: Tool[] = [
       if (typeof patch.status === "string") {
         oneOf(patch.status, SHOT_STATUSES as ShotStatus[], "shot status");
       }
+      if (patch.risk_tail !== undefined) patch.risk_tail = asRiskTail(patch.risk_tail);
       if (typeof patch.location_id === "string") await own(ctx, "locations", patch.location_id);
       if (typeof patch.look_id === "string") await own(ctx, "looks", patch.look_id);
       if (typeof patch.beat_id === "string") await own(ctx, "beats", patch.beat_id);
@@ -680,28 +865,51 @@ export const TOOLS: Tool[] = [
         .eq("id", shotId)
         .eq("user_id", ctx.userId);
       if (error) throw new Error(error.message);
-      return { shot_id: shotId, updated: Object.keys(patch) };
+      return {
+        shot_id: shotId,
+        updated: Object.keys(patch),
+        warnings: await shotCraftWarnings(ctx, shotId),
+      };
     },
   },
+
   {
     name: "add_character_to_shot",
-    description: "Attach a character to a shot with per-shot state (merged into any existing state).",
+    description:
+      "Attach a character to a shot with per-shot state (merged into any existing state).",
     inputSchema: schema({ shot_id: S.string, character_id: S.string, state: S.object }, [
       "shot_id",
       "character_id",
     ]),
     handler: (ctx, a) =>
-      addJoin(ctx, "shot_characters", "character_id", "characters", str(a, "shot_id"), str(a, "character_id"), optObj(a, "state")),
+      addJoin(
+        ctx,
+        "shot_characters",
+        "character_id",
+        "characters",
+        str(a, "shot_id"),
+        str(a, "character_id"),
+        optObj(a, "state"),
+      ),
   },
   {
     name: "add_element_to_shot",
-    description: "Attach an element to a shot with per-shot state (merged into any existing state).",
+    description:
+      "Attach an element to a shot with per-shot state (merged into any existing state).",
     inputSchema: schema({ shot_id: S.string, element_id: S.string, state: S.object }, [
       "shot_id",
       "element_id",
     ]),
     handler: (ctx, a) =>
-      addJoin(ctx, "shot_elements", "element_id", "elements", str(a, "shot_id"), str(a, "element_id"), optObj(a, "state")),
+      addJoin(
+        ctx,
+        "shot_elements",
+        "element_id",
+        "elements",
+        str(a, "shot_id"),
+        str(a, "element_id"),
+        optObj(a, "state"),
+      ),
   },
 
   /* -------------------------------------------------- generation flow */
@@ -861,7 +1069,64 @@ export const TOOLS: Tool[] = [
           .eq("id", frame.shot_id)
           .eq("user_id", ctx.userId);
       }
-      return { frame_id: frameId, shot_id: frame.shot_id, shot_status: shot.status === "final" ? "final" : "approved" };
+      return {
+        frame_id: frameId,
+        shot_id: frame.shot_id,
+        shot_status: shot.status === "final" ? "final" : "approved",
+      };
+    },
+  },
+  {
+    name: "pair_keyframes",
+    description:
+      "Record an a/b keyframe pair for a shot. The video model interpolates between a and b, so the form must match the shot's declared camera move: locked_camera holds framing and moves the subject; moving_camera changes framing between the plates. Returns any mismatch as a warning.",
+    inputSchema: schema(
+      {
+        shot_id: S.string,
+        a_frame_id: S.string,
+        b_frame_id: S.string,
+        form: { type: "string", enum: KEYFRAME_FORMS.map((f) => f.value) },
+        notes: S.string,
+      },
+      ["shot_id", "a_frame_id", "b_frame_id", "form"],
+    ),
+    handler: async (ctx, a) => {
+      const shotId = str(a, "shot_id");
+      const shot = (await own(ctx, "shots", shotId, "id, camera")) as { camera: unknown };
+      const aFrame = str(a, "a_frame_id");
+      const bFrame = str(a, "b_frame_id");
+      if (aFrame === bFrame) throw new Error("The a and b frames must be different frames");
+      await own(ctx, "frames", aFrame);
+      await own(ctx, "frames", bFrame);
+      const form = oneOf(
+        str(a, "form"),
+        KEYFRAME_FORMS.map((f) => f.value) as KeyframeForm[],
+        "keyframe form",
+      );
+      const row = await insertRow(
+        ctx,
+        "keyframe_pairs",
+        {
+          shot_id: shotId,
+          a_frame_id: aFrame,
+          b_frame_id: bFrame,
+          form,
+          notes: optStr(a, "notes"),
+        },
+        "id",
+      );
+
+      const { data: moveRows } = await ctx.db.from("camera_moves").select("*");
+      const movement = ((shot.camera ?? {}) as { movement?: string }).movement;
+      return {
+        pair_id: row.id,
+        shot_id: shotId,
+        warnings: keyframeFormWarnings(
+          form,
+          movement,
+          mergeVocab((moveRows ?? []) as unknown as CameraMoveRow[]),
+        ),
+      };
     },
   },
 ];
@@ -895,7 +1160,12 @@ async function addJoin(
 
     return { id: existing.id, shot_id: shotId, [fkColumn]: assetId, created: false };
   }
-  const row = await insertRow(ctx, table, { shot_id: shotId, [fkColumn]: assetId, state: state ?? {} }, "id");
+  const row = await insertRow(
+    ctx,
+    table,
+    { shot_id: shotId, [fkColumn]: assetId, state: state ?? {} },
+    "id",
+  );
   return { id: row.id, shot_id: shotId, [fkColumn]: assetId, created: true };
 }
 

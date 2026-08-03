@@ -47,7 +47,10 @@ export function PromoteToCanonDialog({
     queryFn: async (): Promise<AspectRow[]> => {
       const [{ data: shot }, { data: chars }, { data: els }] = await Promise.all([
         supabase.from("shots").select("id, location_id, locations(*)").eq("id", shotId).single(),
-        supabase.from("shot_characters").select("character_id, characters(*)").eq("shot_id", shotId),
+        supabase
+          .from("shot_characters")
+          .select("character_id, characters(*)")
+          .eq("shot_id", shotId),
         supabase.from("shot_elements").select("element_id, elements(*)").eq("shot_id", shotId),
       ]);
       const out: AspectRow[] = [];
@@ -123,7 +126,9 @@ export function PromoteToCanonDialog({
       for (const r of selected) {
         const match = (existing ?? []).find(
           (c) =>
-            c.subject_type === r.subjectType && c.subject_id === r.subjectId && c.aspect === r.aspect,
+            c.subject_type === r.subjectType &&
+            c.subject_id === r.subjectId &&
+            c.aspect === r.aspect,
         );
         const description = notes[r.key] || r.label;
         if (match) {
@@ -150,15 +155,16 @@ export function PromoteToCanonDialog({
 
       qc.invalidateQueries();
       toast.success(
-        [created ? `${created} canon record${created === 1 ? "" : "s"} created` : null,
-         updated ? `${updated} updated` : null]
+        [
+          created ? `${created} canon record${created === 1 ? "" : "s"} created` : null,
+          updated ? `${updated} updated` : null,
+        ]
           .filter(Boolean)
           .join(" · "),
       );
       setChecked({});
       setNotes({});
       onOpenChange(false);
-
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {

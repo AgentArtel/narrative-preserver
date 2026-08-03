@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { Plus, Sparkles, LogOut, Plug } from "lucide-react";
 import { McpAccessDialog } from "@/components/sf/McpAccessDialog";
 
-
 export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
 });
@@ -102,7 +101,6 @@ function ProjectsPage() {
         </div>
       </header>
       <McpAccessDialog open={mcpOpen} onOpenChange={setMcpOpen} />
-
 
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">

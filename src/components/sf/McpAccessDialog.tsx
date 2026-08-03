@@ -112,7 +112,6 @@ export function McpAccessDialog({
           </DialogDescription>
         </DialogHeader>
 
-
         <div className="space-y-4">
           <div className="flex items-end gap-2">
             <div className="flex-1 space-y-1.5">
@@ -169,9 +168,7 @@ export function McpAccessDialog({
                 </Button>
               </div>
             ))}
-            {keys?.length === 0 && (
-              <p className="text-sm text-muted-foreground">No keys yet.</p>
-            )}
+            {keys?.length === 0 && <p className="text-sm text-muted-foreground">No keys yet.</p>}
           </div>
         </div>
 

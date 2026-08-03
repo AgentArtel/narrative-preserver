@@ -111,11 +111,7 @@ export function ProjectLocksDialog({
             Cancel
           </Button>
           {!frozen && (
-            <Button
-              variant="outline"
-              onClick={() => save.mutate(true)}
-              disabled={save.isPending}
-            >
+            <Button variant="outline" onClick={() => save.mutate(true)} disabled={save.isPending}>
               Save &amp; freeze
             </Button>
           )}

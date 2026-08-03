@@ -51,7 +51,7 @@
       {
         "name": "get_project_overview",
         "title": "get_project_overview",
-        "description": "Full orientation for one project: sequence → scene → shot tree plus cast, locations, elements, looks and canon count.",
+        "description": "Full orientation for one project: gate, code, locks, the sequence → scene → shot tree, cast, locations with five-lock readiness, elements, looks, the project's camera-move and risk-class vocabularies, and canon count.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -194,7 +194,7 @@
       {
         "name": "upsert_location",
         "title": "upsert_location",
-        "description": "Create or update a location, matched on project + name. Landmarks are named world features each fixed to a screen side; the blocking anchor is the single large immovable object all character positions are measured against.",
+        "description": "Create or update a location, matched on project + name. Carries the five locks: geography (landmarks fixed to a screen side plus the single immovable blocking anchor), light logic, materials and depth planes. A plate is not locked until its reverse angle has been generated separately and verified — see stamp_location_verification.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -237,11 +237,79 @@
             },
             "blocking_anchor": {
               "type": "string"
+            },
+            "light_logic": {
+              "type": "string"
+            },
+            "materials": {
+              "type": "string"
+            },
+            "depth_planes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "plane": {
+                    "type": "string",
+                    "enum": [
+                      "foreground",
+                      "midground",
+                      "background"
+                    ]
+                  },
+                  "contents": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "plane",
+                  "contents"
+                ]
+              }
             }
           },
           "required": [
             "project_id",
             "name"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "stamp_location_verification",
+        "title": "stamp_location_verification",
+        "description": "Record the master and reverse plates for a location and stamp verification. Screen-left becomes screen-right the moment the camera turns, so the reverse angle must be generated separately and checked against the geography before the plate is treated as locked. The motion test stamps that the plate survives a camera move.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "location_id": {
+              "type": "string"
+            },
+            "master_frame_id": {
+              "type": "string"
+            },
+            "reverse_frame_id": {
+              "type": "string"
+            },
+            "reverse_verified": {
+              "type": "boolean"
+            },
+            "reverse_verification_note": {
+              "type": "string"
+            },
+            "motion_test_frame_id": {
+              "type": "string"
+            },
+            "motion_test_passed": {
+              "type": "boolean"
+            },
+            "motion_test_note": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "location_id"
           ]
         },
         "outputSchema": null
@@ -495,7 +563,7 @@
       {
         "name": "create_shot",
         "title": "create_shot",
-        "description": "Create a shot in a scene, appended at the end with status 'idea'.",
+        "description": "Create a shot in a scene, appended at the end with status 'idea'. camera.movement should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -537,6 +605,33 @@
             },
             "look_id": {
               "type": "string"
+            },
+            "risk_tail": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "risk_class": {
+                    "type": "string"
+                  },
+                  "prediction": {
+                    "type": "string"
+                  },
+                  "fallback": {
+                    "type": "string"
+                  },
+                  "occurred": {
+                    "type": "string",
+                    "enum": [
+                      "yes",
+                      "no"
+                    ]
+                  }
+                },
+                "required": [
+                  "risk_class"
+                ]
+              }
             }
           },
           "required": [
@@ -549,7 +644,7 @@
       {
         "name": "update_shot",
         "title": "update_shot",
-        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number.",
+        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -781,6 +876,43 @@
           },
           "required": [
             "frame_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "pair_keyframes",
+        "title": "pair_keyframes",
+        "description": "Record an a/b keyframe pair for a shot. The video model interpolates between a and b, so the form must match the shot's declared camera move: locked_camera holds framing and moves the subject; moving_camera changes framing between the plates. Returns any mismatch as a warning.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "a_frame_id": {
+              "type": "string"
+            },
+            "b_frame_id": {
+              "type": "string"
+            },
+            "form": {
+              "type": "string",
+              "enum": [
+                "locked_camera",
+                "moving_camera"
+              ]
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "shot_id",
+            "a_frame_id",
+            "b_frame_id",
+            "form"
           ]
         },
         "outputSchema": null

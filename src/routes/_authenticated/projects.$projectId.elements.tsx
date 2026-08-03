@@ -7,7 +7,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/elemen
       { title: "Elements — StoryForge" },
       { name: "description", content: "Props and set elements with references and canon aspects." },
       { property: "og:title", content: "Elements — StoryForge" },
-      { property: "og:description", content: "Props and set elements with references and canon aspects." },
+      {
+        property: "og:description",
+        content: "Props and set elements with references and canon aspects.",
+      },
     ],
   }),
   component: () => {

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { asLandmarks, asPalette, asRecord, LOCK_FIELDS, type Camera } from "./storyforge";
+import { asDepthPlanes } from "./craft";
 
 export type DB = SupabaseClient<Database>;
 
@@ -24,7 +25,6 @@ function verbatimLock(title: string, text: string | null | undefined): string {
   if (!text || !text.trim()) return "";
   return `${title}\n${text}\n`;
 }
-
 
 /**
  * Compiles the full generation context for a shot. Parameterized by a Supabase
@@ -114,8 +114,6 @@ export async function buildGenerationPackageWith(
     );
   }
 
-
-
   lines.push(
     block("SCENE", [
       `Sequence: ${scene?.sequences?.title ?? "—"}`,
@@ -161,13 +159,18 @@ export async function buildGenerationPackageWith(
 
   if (location) {
     const ls = asRecord(shot.location_state);
-    const landmarks = asLandmarks((location as Record<string, unknown>).landmarks);
-    const anchor = (location as Record<string, unknown>).blocking_anchor as string | null;
+    const loc = location as Record<string, unknown>;
+    const landmarks = asLandmarks(loc.landmarks);
+    const anchor = loc.blocking_anchor as string | null;
+    const depth = asDepthPlanes(loc.depth_planes);
     lines.push(
       block(`LOCATION — ${location.name}`, [
         `Description: ${location.description ?? "—"}`,
         ...landmarks.map((l) => `Landmark / ${l.name}: ${l.side}`),
         ...(anchor ? [`Blocking anchor: ${anchor}`] : []),
+        ...(loc.light_logic ? [`Light logic: ${loc.light_logic as string}`] : []),
+        ...(loc.materials ? [`Materials: ${loc.materials as string}`] : []),
+        ...depth.map((d) => `Depth / ${d.plane}: ${d.contents}`),
         ...Object.entries(ls).map(([k, v]) => `shot state / ${k}: ${v}`),
         ...canonFor("location", location.id).map(
           (r) => `CANON / ${r.aspect}: ${r.description ?? ""}`,
@@ -175,7 +178,6 @@ export async function buildGenerationPackageWith(
       ]),
     );
   }
-
 
   for (const se of shotEls ?? []) {
     const el = se.elements;
@@ -250,7 +252,12 @@ export async function buildGenerationPackageWith(
   // Provider Elements: what the operator must attach in the generation tool
   // before rendering. Named identities are how character and location identity
   // carries from one shot to the next.
-  const identityOwnerIds = [...charIds, ...elIds, ...(shot.location_id ? [shot.location_id] : []), shot.id];
+  const identityOwnerIds = [
+    ...charIds,
+    ...elIds,
+    ...(shot.location_id ? [shot.location_id] : []),
+    shot.id,
+  ];
   const { data: identities } = await supabase
     .from("provider_identities")
     .select("provider, capability, external_id, owner_type, owner_id, status")
@@ -291,9 +298,7 @@ export async function buildGenerationPackageWith(
         currentProvider = pe.provider;
         peLines.push(`${currentProvider}:`);
       }
-      peLines.push(
-        `- ${pe.owner_name} (${pe.owner_type}) — ${pe.capability}: ${pe.external_id}`,
-      );
+      peLines.push(`- ${pe.owner_name} (${pe.owner_type}) — ${pe.capability}: ${pe.external_id}`);
     }
     lines.push(
       block("PROVIDER ELEMENTS — attach these in the generation tool before rendering", peLines),

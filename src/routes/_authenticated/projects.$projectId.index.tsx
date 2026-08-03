@@ -16,10 +16,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ChevronRight, Lock as LockIcon, Plus } from "lucide-react";
+import { ChevronRight, ListTree, Lock as LockIcon, Plus } from "lucide-react";
 import { ProjectLocksDialog } from "@/components/sf/ProjectLocksDialog";
+import { VocabularyDialog } from "@/components/sf/VocabularyDialog";
 import { LOCK_FIELDS } from "@/lib/storyforge";
-
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   head: () => ({
@@ -58,8 +58,7 @@ function ProjectHome() {
   const [sceneTitle, setSceneTitle] = useState("");
   const [sceneBrief, setSceneBrief] = useState("");
   const [locksOpen, setLocksOpen] = useState(false);
-
-
+  const [vocabOpen, setVocabOpen] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["project-home", projectId],
@@ -184,8 +183,6 @@ function ProjectHome() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
-
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">{data?.project?.title}</h1>
@@ -202,9 +199,14 @@ function ProjectHome() {
               generation package in this project.
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setLocksOpen(true)}>
-            <LockIcon className="size-4" /> {locksSet ? "Edit locks" : "Set locks"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setVocabOpen(true)}>
+              <ListTree className="size-4" /> Vocabularies
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setLocksOpen(true)}>
+              <LockIcon className="size-4" /> {locksSet ? "Edit locks" : "Set locks"}
+            </Button>
+          </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           {LOCK_FIELDS.map((f) => {
@@ -213,9 +215,7 @@ function ProjectHome() {
               <span
                 key={f.key}
                 className={`rounded border px-2 py-1 ${
-                  set
-                    ? "border-primary/60 text-primary"
-                    : "border-border text-muted-foreground"
+                  set ? "border-primary/60 text-primary" : "border-border text-muted-foreground"
                 }`}
               >
                 {f.label} · {set ? "set" : "empty"}
@@ -246,6 +246,7 @@ function ProjectHome() {
         onOpenChange={setLocksOpen}
       />
 
+      <VocabularyDialog projectId={projectId} open={vocabOpen} onOpenChange={setVocabOpen} />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
@@ -276,10 +277,8 @@ function ProjectHome() {
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{sc.title}</div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {
-                            (data?.shots ?? []).filter((s) => s.scene_id === sc.id).length
-                          }{" "}
-                          shots · {sc.status}
+                          {(data?.shots ?? []).filter((s) => s.scene_id === sc.id).length} shots ·{" "}
+                          {sc.status}
                         </div>
                       </div>
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -417,6 +416,5 @@ function ProjectHome() {
         </DialogContent>
       </Dialog>
     </main>
-
   );
 }
