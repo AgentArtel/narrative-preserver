@@ -20,6 +20,7 @@ import { ChevronRight, ListTree, Lock as LockIcon, Plus } from "lucide-react";
 import { ProjectLocksDialog } from "@/components/sf/ProjectLocksDialog";
 import { VocabularyDialog } from "@/components/sf/VocabularyDialog";
 import { LOCK_FIELDS } from "@/lib/storyforge";
+import { spendRollup } from "@/lib/validation";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   head: () => ({
