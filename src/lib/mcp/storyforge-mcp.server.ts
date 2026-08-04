@@ -227,7 +227,7 @@ const UPDATABLE_SHOT_KEYS = [
 async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
   const { data: shot } = await ctx.db
     .from("shots")
-    .select("camera, risk_tail, scenes(sequences(project_id))")
+    .select("camera, risk_tail, description, location_id, scenes(sequences(project_id))")
     .eq("id", shotId)
     .eq("user_id", ctx.userId)
     .maybeSingle();
@@ -239,15 +239,36 @@ async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
     ctx.db.from("camera_moves").select("*").or(filter),
     ctx.db.from("risk_classes").select("*").or(filter),
   ]);
+  const moveRows = mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]);
   const movement = ((shot.camera ?? {}) as { movement?: string }).movement;
+
+  let location: Record<string, unknown> | null = null;
+  if (shot.location_id) {
+    const { data } = await ctx.db
+      .from("locations")
+      .select(LOCATION_SELECT)
+      .eq("id", shot.location_id)
+      .eq("user_id", ctx.userId)
+      .maybeSingle();
+    location = (data ?? null) as Record<string, unknown> | null;
+  }
+
   return [
-    ...cameraMoveWarnings(movement, mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[])),
+    ...lintShotLine({
+      line: shot.description,
+      movement,
+      moves: moveRows,
+      landmarks: asLandmarks(location?.landmarks),
+      blockingAnchor: (location?.blocking_anchor as string | null) ?? null,
+      locationName: (location?.name as string | null) ?? null,
+    }).map(warningText),
     ...riskTailWarnings(
       asRiskTail(shot.risk_tail),
       mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
     ),
   ];
 }
+
 
 export const TOOLS: Tool[] = [
   {
