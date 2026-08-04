@@ -108,6 +108,13 @@ function ProjectHome() {
             .order("created_at", { ascending: false })
             .limit(6)
         : { data: [] };
+      // Every generation, tier only — money is a first-class fact on this page.
+      const { data: spendRows } = shotIds.length
+        ? await supabase
+            .from("generations")
+            .select("tier, cost_credits, created_at, shots(status, updated_at)")
+            .in("shot_id", shotIds)
+        : { data: [] };
       return {
         project,
         sequences: sequences ?? [],
@@ -121,11 +128,21 @@ function ProjectHome() {
           canon: canon ?? 0,
         },
         generations: generations ?? [],
+        spend: spendRollup(
+          (spendRows ?? []).map((g) => ({
+            tier: g.tier ?? null,
+            cost_credits: g.cost_credits ?? null,
+            created_at: g.created_at,
+            shot_status: g.shots?.status ?? null,
+            shot_updated_at: g.shots?.updated_at ?? null,
+          })),
+        ),
       };
     },
   });
 
   const pending = (data?.shots ?? []).filter((s) => s.status === "candidates");
+
   const locksSet = LOCK_FIELDS.some(
     (f) => !!(data?.project as Record<string, unknown> | undefined)?.[f.key],
   );
