@@ -69,7 +69,7 @@ export function cameraMoveWarnings(
   const warnings: string[] = [];
   const tokens = parseMovementTokens(movement);
   if (!tokens.length) {
-    warnings.push(`No camera move declared. ${UNDECLARED_MOVE_HINT}`);
+    warnings.push(`No camera move declared — expected \`camera.movement\`. ${UNDECLARED_MOVE_HINT}`);
     return warnings;
   }
   const allowed = moves.map((m) => m.label).join(", ");
