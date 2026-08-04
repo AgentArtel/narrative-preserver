@@ -113,7 +113,7 @@ function ProjectHome() {
       const { data: spendRows } = shotIds.length
         ? await supabase
             .from("generations")
-            .select("tier, cost_credits, created_at, shots(status, updated_at)")
+            .select("shot_id, tier, status, cost_credits, created_at, shots(status)")
             .in("shot_id", shotIds)
         : { data: [] };
       return {
@@ -131,11 +131,12 @@ function ProjectHome() {
         generations: generations ?? [],
         spend: spendRollup(
           (spendRows ?? []).map((g) => ({
+            shot_id: g.shot_id ?? null,
             tier: g.tier ?? null,
+            status: g.status ?? null,
             cost_credits: g.cost_credits ?? null,
             created_at: g.created_at,
             shot_status: g.shots?.status ?? null,
-            shot_updated_at: g.shots?.updated_at ?? null,
           })),
         ),
       };
@@ -264,13 +265,12 @@ function ProjectHome() {
           <Stat label="Total credits" value={data?.spend.total_credits ?? 0} />
           <Stat label="Finish tier" value={data?.spend.finish_credits ?? 0} />
           <Stat
-            label="Finish credits on changed shots"
+            label="Finish credits that bought nothing"
             value={`${data?.spend.wasted_finish_credits ?? 0} (${data?.spend.wasted_pct ?? 0}%)`}
           />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{data?.spend.sentence}</p>
       </div>
-
 
       <ProjectLocksDialog
         projectId={projectId}

@@ -86,7 +86,11 @@ export function lintShotLine(input: ShotLineInput): CraftWarning[] {
 
   if (!line) {
     out.push(
-      warn("shot_line_empty", "This shot has no line yet.", "There is nothing to lint until it does."),
+      warn(
+        "shot_line_empty",
+        "This shot has no line yet.",
+        "There is nothing to lint until it does.",
+      ),
     );
   }
 
@@ -252,10 +256,7 @@ export function checkLocationReady(
       "a diagnostic baseline for continuity drift",
     );
   } else if (state.plateLocked) {
-    usable.push(
-      "reverse and over-shoulder coverage",
-      "a diagnostic baseline for continuity drift",
-    );
+    usable.push("reverse and over-shoulder coverage", "a diagnostic baseline for continuity drift");
   }
 
   return {
@@ -359,7 +360,8 @@ export function quoteCost(
   seconds: number,
   rateSlug?: string | null,
 ): CostQuote {
-  const rate = (rateSlug && rates.find((r) => r.slug === rateSlug)) || defaultRateForTier(rates, tier);
+  const rate =
+    (rateSlug && rates.find((r) => r.slug === rateSlug)) || defaultRateForTier(rates, tier);
   const previs = cheapestRate(rates);
   const credits = rateCredits(rate, seconds);
   const previsCredits = rateCredits(previs, seconds);
@@ -385,38 +387,85 @@ export function quoteCost(
 /* ------------------------------------------------------------ spend rollup */
 
 export type SpendRow = {
+  shot_id: string | null;
   tier: string | null;
   cost_credits: number | null;
   created_at: string;
+  /** The generation's own status: handed_off | imported | rejected. */
+  status?: string | null;
   shot_status: string | null;
-  shot_updated_at: string | null;
 };
 
-/** The number that changes behaviour: finish credits spent on shots that later changed. */
+/** Statuses that mean a finish render did not buy what ships: the shot is being
+ *  reworked, or it became a still after motion was paid for. */
+const SPEND_ABANDONED_STATUSES = new Set(["revision", "held_still"]);
+
+/**
+ * The number that changes behaviour: finish credits that bought nothing.
+ *
+ * Waste is derived from the generation rows themselves — a finish render with
+ * a later generation on the same shot was superseded and is money spent twice.
+ * An earlier version keyed off `shots.updated_at` being later than the render,
+ * which counted the success case as waste: approving a frame writes
+ * `shots.status`, the update trigger bumps `updated_at`, and every approved
+ * shot then reported its own finish spend as wasted.
+ */
 export function spendRollup(rows: SpendRow[]) {
+  // Track the row INDEX of each shot's surviving finish render, not its
+  // timestamp: two renders can share a created_at, and comparing timestamps
+  // would then leave both looking like the survivor and count neither as
+  // superseded. On a tie the later row in the array wins, so exactly one
+  // survivor exists per shot.
+  // A rejected render is never the survivor. Otherwise trying a 4K variant and
+  // rejecting it would move the "wasted" label onto the render that shipped.
+  const survivingIdx = new Map<string, number>();
+  rows.forEach((r, i) => {
+    if (r.tier !== "finish" || !r.shot_id || r.status === "rejected") return;
+    const cur = survivingIdx.get(r.shot_id);
+    if (cur === undefined) {
+      survivingIdx.set(r.shot_id, i);
+      return;
+    }
+    const a = new Date(rows[cur].created_at).getTime();
+    const b = new Date(r.created_at).getTime();
+    if (b >= a) survivingIdx.set(r.shot_id, i);
+  });
+
   let total = 0;
   let finish = 0;
   let wasted = 0;
-  for (const r of rows) {
+  let supersededCount = 0;
+  rows.forEach((r, i) => {
     const credits = r.cost_credits ?? 0;
     total += credits;
-    if (r.tier !== "finish") continue;
+    if (r.tier !== "finish") return;
     finish += credits;
-    const changedAfter =
-      !!r.shot_updated_at && new Date(r.shot_updated_at).getTime() > new Date(r.created_at).getTime();
-    const abandoned = r.shot_status === "held_still" || r.shot_status === "revision";
-    if (changedAfter || abandoned) wasted += credits;
-  }
-  const pct = total > 0 ? Math.round((wasted / total) * 100) : 0;
+
+    // A rejected render bought nothing by definition, and so did one that a
+    // later render replaced.
+    const rejected = r.status === "rejected";
+    const superseded = !rejected && !!r.shot_id && survivingIdx.get(r.shot_id) !== i;
+    if (superseded) supersededCount += 1;
+    if (rejected || superseded || SPEND_ABANDONED_STATUSES.has(r.shot_status ?? "")) {
+      wasted += credits;
+    }
+  });
+
   const round = (n: number) => Math.round(n * 100) / 100;
+  // Share of FINISH spend, not of total — mixing the denominators made the
+  // figure unreadable next to the label.
+  const pct = finish > 0 ? Math.round((wasted / finish) * 100) : 0;
   return {
     total_credits: round(total),
     finish_credits: round(finish),
     wasted_finish_credits: round(wasted),
     wasted_pct: pct,
-    sentence: total
-      ? `${round(total)} credits total, ${pct}% finish tier on shots that later changed.`
-      : "No spend recorded yet.",
+    superseded_finish_renders: supersededCount,
+    sentence: !total
+      ? "No spend recorded yet."
+      : !finish
+        ? `${round(total)} credits total, all of it previs.`
+        : `${round(total)} credits total, ${round(finish)} at finish tier, of which ${pct}% bought nothing — re-rendered or set aside.`,
   };
 }
 

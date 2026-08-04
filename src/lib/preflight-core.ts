@@ -8,7 +8,7 @@
 
 import type { DB } from "./generation-package-core";
 import { fetchProviderElements } from "./generation-package-core";
-import { asRiskTail, locationLockState, mergeVocab, type CameraMoveRow } from "./craft";
+import { asRiskTail, locationLockState, mergeVocab, vocabScope, type CameraMoveRow } from "./craft";
 import {
   checkLocationReady,
   lintShotLine,
@@ -67,21 +67,14 @@ export async function runPreflight(db: DB, userId: string, input: PreflightInput
     };
   }
 
-  const scope = `project_id.is.null,project_id.eq.${projectId}`;
+  // Same hand-applied scope as the MCP tools: this also runs service-role.
+  const scope = vocabScope(userId, projectId);
   const [moves, rates, locations, elements, characters] = await Promise.all([
     db.from("camera_moves").select("*").or(scope),
     db.from("model_rates").select("*").or(scope),
     db.from("locations").select("*").eq("project_id", projectId).eq("user_id", userId),
-    db
-      .from("elements")
-      .select("id, name")
-      .eq("project_id", projectId)
-      .eq("user_id", userId),
-    db
-      .from("characters")
-      .select("id, name")
-      .eq("project_id", projectId)
-      .eq("user_id", userId),
+    db.from("elements").select("id, name").eq("project_id", projectId).eq("user_id", userId),
+    db.from("characters").select("id, name").eq("project_id", projectId).eq("user_id", userId),
   ]);
 
   const moveRows = mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]);

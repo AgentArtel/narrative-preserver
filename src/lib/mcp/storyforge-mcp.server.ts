@@ -21,6 +21,7 @@ import {
   keyframeFormWarnings,
   locationLockState,
   mergeVocab,
+  vocabScope,
   riskTailWarnings,
   type CameraMoveRow,
   type KeyframeForm,
@@ -269,7 +270,7 @@ async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
   if (!shot) return [];
   const projectId = (shot as { scenes?: { sequences?: { project_id?: string } } }).scenes?.sequences
     ?.project_id;
-  const filter = projectId ? `project_id.is.null,project_id.eq.${projectId}` : "project_id.is.null";
+  const filter = vocabScope(ctx.userId, projectId ?? null);
   const [moves, risks] = await Promise.all([
     ctx.db.from("camera_moves").select("*").or(filter),
     ctx.db.from("risk_classes").select("*").or(filter),
@@ -397,14 +398,8 @@ export const TOOLS: Tool[] = [
             .select("id", { count: "exact", head: true })
             .eq("project_id", projectId)
             .eq("user_id", ctx.userId),
-          ctx.db
-            .from("camera_moves")
-            .select("*")
-            .or(`project_id.is.null,project_id.eq.${projectId}`),
-          ctx.db
-            .from("risk_classes")
-            .select("*")
-            .or(`project_id.is.null,project_id.eq.${projectId}`),
+          ctx.db.from("camera_moves").select("*").or(vocabScope(ctx.userId, projectId)),
+          ctx.db.from("risk_classes").select("*").or(vocabScope(ctx.userId, projectId)),
         ],
       );
       const moveRows = mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]);
@@ -1270,9 +1265,7 @@ export const TOOLS: Tool[] = [
           .maybeSingle();
         location = (data ?? null) as Record<string, unknown> | null;
       }
-      const filter = projectId
-        ? `project_id.is.null,project_id.eq.${projectId}`
-        : "project_id.is.null";
+      const filter = vocabScope(ctx.userId, projectId);
       const { data: moveRows } = await ctx.db.from("camera_moves").select("*").or(filter);
       const warnings = lintShotLine({
         line,
@@ -1334,11 +1327,18 @@ export const TOOLS: Tool[] = [
     ),
     handler: async (ctx, a) => {
       const frameId = str(a, "frame_id");
-      await own(ctx, "frames", frameId);
+      const frame = (await own(ctx, "frames", frameId, "id, shot_id")) as { shot_id: string };
       const characterId = optStr(a, "character_id");
       if (characterId) await own(ctx, "characters", characterId);
 
-      const { data: itemRows } = await ctx.db.from("sheet_checklist_items").select("*");
+      // Was an unscoped select on a service-role client, so it returned every
+      // checklist row in the database — including other accounts' overrides,
+      // which mergeVocab then let displace the seeds by slug.
+      const sheetProjectId = await projectIdForShot(ctx, frame.shot_id);
+      const { data: itemRows } = await ctx.db
+        .from("sheet_checklist_items")
+        .select("*")
+        .or(vocabScope(ctx.userId, sheetProjectId));
       const items = mergeVocab((itemRows ?? []) as unknown as SheetChecklistRow[]);
 
       const { data: prior } = await ctx.db
@@ -1460,7 +1460,12 @@ export const TOOLS: Tool[] = [
         "id",
       );
 
-      const { data: moveRows } = await ctx.db.from("camera_moves").select("*");
+      // Same fix as check_sheet: unscoped on a service-role client meant any
+      // account's override of a move could decide this pair's warning.
+      const { data: moveRows } = await ctx.db
+        .from("camera_moves")
+        .select("*")
+        .or(vocabScope(ctx.userId, await projectIdForShot(ctx, shotId)));
       const movement = ((shot.camera ?? {}) as { movement?: string }).movement;
       return {
         pair_id: row.id,
@@ -1603,15 +1608,12 @@ async function pipelinePosition(
         d.characters.map((c) => c.id),
       ),
     // sheetSummary needs the checklist to know what "unanswered" means.
-    ctx.db
-      .from("sheet_checklist_items")
-      .select("*")
-      .or(`project_id.is.null,project_id.eq.${projectId}`),
+    ctx.db.from("sheet_checklist_items").select("*").or(vocabScope(ctx.userId, projectId)),
     // generations hang off shots, not projects — scope by this project's shot ids.
     shots.length
       ? ctx.db
           .from("generations")
-          .select("tier, cost_credits, created_at, shots(status, updated_at)")
+          .select("shot_id, tier, status, cost_credits, created_at, shots(status)")
           .eq("user_id", ctx.userId)
           .in(
             "shot_id",
@@ -1707,17 +1709,20 @@ async function pipelinePosition(
     ? []
     : (spend.data ?? []).map((g) => {
         const row = g as {
+          shot_id: string | null;
           tier: string | null;
+          status: string | null;
           cost_credits: number | null;
           created_at: string;
-          shots?: { status?: string | null; updated_at?: string | null } | null;
+          shots?: { status?: string | null } | null;
         };
         return {
+          shot_id: row.shot_id,
           tier: row.tier,
+          status: row.status,
           cost_credits: row.cost_credits,
           created_at: row.created_at,
           shot_status: row.shots?.status ?? null,
-          shot_updated_at: row.shots?.updated_at ?? null,
         };
       });
 
@@ -1791,7 +1796,7 @@ async function fetchVocabularies(
   rows: Partial<Record<VocabularyKind, VocabRow[]>>;
   unreadable: { kind: VocabularyKind; reason: string }[];
 }> {
-  const filter = `project_id.is.null,project_id.eq.${projectId}`;
+  const filter = vocabScope(ctx.userId, projectId);
   const results = await Promise.all(
     kinds.map((k) => ctx.db.from(VOCABULARY_TABLES[k]).select("*").or(filter)),
   );
