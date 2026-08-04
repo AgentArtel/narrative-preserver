@@ -216,6 +216,9 @@ function Section({
   onRestore,
   onAdd,
   badge,
+  descriptionField = "description",
+  descriptionPlaceholder = "Description",
+  numericField,
 }: {
   title: string;
   note: string;
@@ -225,6 +228,10 @@ function Section({
   onRestore: (row: VocabRow) => void;
   onAdd: (label: string) => void;
   badge?: (row: VocabRow) => string;
+  /** Some vocabularies carry their prose in a craft-specific column. */
+  descriptionField?: string;
+  descriptionPlaceholder?: string;
+  numericField?: { key: string; label: string; get: (row: VocabRow) => number };
 }) {
   const [draft, setDraft] = useState("");
   return (
@@ -232,26 +239,46 @@ function Section({
       <div className="label-caps">{title}</div>
       <p className="text-xs text-muted-foreground">{note}</p>
       <div className="space-y-1.5">
-        {rows.map((row) => (
-          <div key={row.slug} className="flex items-center gap-2 rounded border border-border p-2">
-            <div className="w-40 shrink-0">
-              <div className="text-xs font-medium">{row.label}</div>
-              <div className="font-mono text-[10px] text-muted-foreground">
-                {row.slug}
-                {badge ? ` · ${badge(row)}` : ""}
-                {row.project_id ? " · project" : ""}
+        {rows.map((row) => {
+          const prose = String((row as unknown as Record<string, unknown>)[descriptionField] ?? "");
+          return (
+            <div key={row.slug} className="flex items-center gap-2 rounded border border-border p-2">
+              <div className="w-40 shrink-0">
+                <div className="text-xs font-medium">{row.label}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">
+                  {row.slug}
+                  {badge ? ` · ${badge(row)}` : ""}
+                  {row.project_id ? " · project" : ""}
+                </div>
               </div>
-            </div>
-            <Input
-              className="h-8 text-xs"
-              defaultValue={row.description ?? ""}
-              placeholder="Description"
-              onBlur={(e) => {
-                if (e.target.value !== (row.description ?? "")) {
-                  onPatch(row, { description: e.target.value || null });
-                }
-              }}
-            />
+              <Input
+                className="h-8 text-xs"
+                defaultValue={prose}
+                placeholder={descriptionPlaceholder}
+                onBlur={(e) => {
+                  if (e.target.value !== prose) {
+                    onPatch(row, { [descriptionField]: e.target.value || null });
+                  }
+                }}
+              />
+              {numericField && (
+                <div className="flex shrink-0 items-center gap-1">
+                  <Input
+                    type="number"
+                    step="0.1"
+                    className="h-8 w-20 text-xs tabular-nums"
+                    defaultValue={numericField.get(row)}
+                    onBlur={(e) => {
+                      const next = Number(e.target.value);
+                      if (Number.isFinite(next) && next !== numericField.get(row)) {
+                        onPatch(row, { [numericField.key]: next });
+                      }
+                    }}
+                  />
+                  <span className="text-[10px] text-muted-foreground">{numericField.label}</span>
+                </div>
+              )}
+
             <Button
               size="icon"
               variant="ghost"
