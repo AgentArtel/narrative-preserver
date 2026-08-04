@@ -279,30 +279,32 @@ function Section({
                 </div>
               )}
 
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-8 shrink-0"
-              title="Hide in this project"
-              disabled={busy}
-              onClick={() => onPatch(row, { hidden: true })}
-            >
-              <EyeOff className="size-3.5" />
-            </Button>
-            {row.project_id && (
               <Button
                 size="icon"
                 variant="ghost"
                 className="size-8 shrink-0"
-                title="Remove this project override"
+                title="Hide in this project"
                 disabled={busy}
-                onClick={() => onRestore(row)}
+                onClick={() => onPatch(row, { hidden: true })}
               >
-                <RotateCcw className="size-3.5" />
+                <EyeOff className="size-3.5" />
               </Button>
-            )}
-          </div>
-        ))}
+              {row.project_id && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8 shrink-0"
+                  title="Remove this project override"
+                  disabled={busy}
+                  onClick={() => onRestore(row)}
+                >
+                  <RotateCcw className="size-3.5" />
+                </Button>
+              )}
+            </div>
+          );
+        })}
+
       </div>
       <div className="flex gap-2">
         <Input
