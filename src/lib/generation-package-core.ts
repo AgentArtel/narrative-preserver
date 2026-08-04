@@ -343,7 +343,7 @@ export async function buildGenerationPackageWith(
       palette: palette.map((p) => p.hex),
       previous_approved_frame: prevApproved ?? null,
       reference_images: [...assetRefs, ...refs],
-      provider_elements: providerElements,
+      provider_elements: providerElements.map(({ owner_id: _ignored, ...pe }) => pe),
       canon_records_applied: (canon ?? []).length,
     },
   };
