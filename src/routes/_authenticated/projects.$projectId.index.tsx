@@ -257,6 +257,21 @@ function ProjectHome() {
         <Stat label="Canon" value={data?.counts.canon ?? 0} />
       </div>
 
+      {/* Spend: previs cheaply, finish only survivors. */}
+      <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+        <SectionLabel>Spend</SectionLabel>
+        <div className="mt-2 grid gap-4 sm:grid-cols-3">
+          <Stat label="Total credits" value={data?.spend.total_credits ?? 0} />
+          <Stat label="Finish tier" value={data?.spend.finish_credits ?? 0} />
+          <Stat
+            label="Finish credits on changed shots"
+            value={`${data?.spend.wasted_finish_credits ?? 0} (${data?.spend.wasted_pct ?? 0}%)`}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{data?.spend.sentence}</p>
+      </div>
+
+
       <ProjectLocksDialog
         projectId={projectId}
         project={data?.project}
