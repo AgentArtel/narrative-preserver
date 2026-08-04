@@ -21,7 +21,7 @@ import { importGenerationResults } from "@/lib/import-results";
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Check, Network, Package, Sparkles, Upload } from "lucide-react";
+import { Check, Network, Package, Sparkles, Upload, Workflow } from "lucide-react";
 
 // Lazy: the inspector pulls in React Flow, which is ~185 kB on its own. Loading
 // it eagerly would make this page — the most visited in the app — 10x heavier
@@ -227,6 +227,11 @@ function ShotDetail() {
           </h1>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/projects/$projectId/canvas/$shotId" params={{ projectId, shotId }}>
+              <Workflow className="size-4" /> Canvas
+            </Link>
+          </Button>
           <Button variant="outline" onClick={() => setDepsOpen(true)}>
             <Network className="size-4" /> Dependencies
           </Button>

@@ -26,6 +26,7 @@ import { Route as AuthenticatedProjectsProjectIdElementsRouteImport } from './ro
 import { Route as AuthenticatedProjectsProjectIdGenerationsRouteImport } from './routes/_authenticated/projects.$projectId.generations'
 import { Route as AuthenticatedProjectsProjectIdLocationsRouteImport } from './routes/_authenticated/projects.$projectId.locations'
 import { Route as AuthenticatedProjectsProjectIdLooksRouteImport } from './routes/_authenticated/projects.$projectId.looks'
+import { Route as AuthenticatedProjectsProjectIdCanvasShotIdRouteImport } from './routes/_authenticated/projects.$projectId.canvas.$shotId'
 import { Route as AuthenticatedProjectsProjectIdSceneSceneIdRouteImport } from './routes/_authenticated/projects.$projectId.scene.$sceneId'
 import { Route as AuthenticatedProjectsProjectIdShotShotIdRouteImport } from './routes/_authenticated/projects.$projectId.shot.$shotId'
 
@@ -124,6 +125,12 @@ const AuthenticatedProjectsProjectIdLooksRoute =
     path: '/looks',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdCanvasShotIdRoute =
+  AuthenticatedProjectsProjectIdCanvasShotIdRouteImport.update({
+    id: '/canvas/$shotId',
+    path: '/canvas/$shotId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdSceneSceneIdRoute =
   AuthenticatedProjectsProjectIdSceneSceneIdRouteImport.update({
     id: '/scene/$sceneId',
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
   '/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/canvas/$shotId': typeof AuthenticatedProjectsProjectIdCanvasShotIdRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
@@ -173,6 +181,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
   '/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/canvas/$shotId': typeof AuthenticatedProjectsProjectIdCanvasShotIdRoute
   '/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
@@ -195,6 +204,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/locations': typeof AuthenticatedProjectsProjectIdLocationsRoute
   '/_authenticated/projects/$projectId/looks': typeof AuthenticatedProjectsProjectIdLooksRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/canvas/$shotId': typeof AuthenticatedProjectsProjectIdCanvasShotIdRoute
   '/_authenticated/projects/$projectId/scene/$sceneId': typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   '/_authenticated/projects/$projectId/shot/$shotId': typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/locations'
     | '/projects/$projectId/looks'
     | '/projects/$projectId/'
+    | '/projects/$projectId/canvas/$shotId'
     | '/projects/$projectId/scene/$sceneId'
     | '/projects/$projectId/shot/$shotId'
   fileRoutesByTo: FileRoutesByTo
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/locations'
     | '/projects/$projectId/looks'
     | '/projects/$projectId'
+    | '/projects/$projectId/canvas/$shotId'
     | '/projects/$projectId/scene/$sceneId'
     | '/projects/$projectId/shot/$shotId'
   id:
@@ -257,6 +269,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/locations'
     | '/_authenticated/projects/$projectId/looks'
     | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/canvas/$shotId'
     | '/_authenticated/projects/$projectId/scene/$sceneId'
     | '/_authenticated/projects/$projectId/shot/$shotId'
   fileRoutesById: FileRoutesById
@@ -394,6 +407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdLooksRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/canvas/$shotId': {
+      id: '/_authenticated/projects/$projectId/canvas/$shotId'
+      path: '/canvas/$shotId'
+      fullPath: '/projects/$projectId/canvas/$shotId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCanvasShotIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
     '/_authenticated/projects/$projectId/scene/$sceneId': {
       id: '/_authenticated/projects/$projectId/scene/$sceneId'
       path: '/scene/$sceneId'
@@ -418,6 +438,7 @@ interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdLocationsRoute: typeof AuthenticatedProjectsProjectIdLocationsRoute
   AuthenticatedProjectsProjectIdLooksRoute: typeof AuthenticatedProjectsProjectIdLooksRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
+  AuthenticatedProjectsProjectIdCanvasShotIdRoute: typeof AuthenticatedProjectsProjectIdCanvasShotIdRoute
   AuthenticatedProjectsProjectIdSceneSceneIdRoute: typeof AuthenticatedProjectsProjectIdSceneSceneIdRoute
   AuthenticatedProjectsProjectIdShotShotIdRoute: typeof AuthenticatedProjectsProjectIdShotShotIdRoute
 }
@@ -436,6 +457,8 @@ const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectI
       AuthenticatedProjectsProjectIdLooksRoute,
     AuthenticatedProjectsProjectIdIndexRoute:
       AuthenticatedProjectsProjectIdIndexRoute,
+    AuthenticatedProjectsProjectIdCanvasShotIdRoute:
+      AuthenticatedProjectsProjectIdCanvasShotIdRoute,
     AuthenticatedProjectsProjectIdSceneSceneIdRoute:
       AuthenticatedProjectsProjectIdSceneSceneIdRoute,
     AuthenticatedProjectsProjectIdShotShotIdRoute:

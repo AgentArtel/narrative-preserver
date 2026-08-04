@@ -76,7 +76,7 @@ export type GraphInput = {
 
 /* ------------------------------------------------------------------ build */
 
-const OWNERS_NEEDING_IDENTITY: DepKind[] = ["location", "character", "element"];
+export const OWNERS_NEEDING_IDENTITY: DepKind[] = ["location", "character", "element"];
 
 /** A node is only "attention" if something concrete is wrong; a not-verified
  *  check means we could not tell, which is a different colour and a different
@@ -88,7 +88,7 @@ function statusFor(notes: CraftWarning[]): DepStatus {
 
 /** A local note that is genuinely this file's to make: an owner that carries no
  *  provider identity cannot be named in the package's PROVIDER ELEMENTS block. */
-const NO_IDENTITY: CraftWarning = {
+export const NO_IDENTITY: CraftWarning = {
   code: "provider_identity_missing",
   level: "warning",
   message: "No provider Element is registered for this asset.",
