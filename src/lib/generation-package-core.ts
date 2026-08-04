@@ -26,6 +26,56 @@ function verbatimLock(title: string, text: string | null | undefined): string {
   return `${title}\n${text}\n`;
 }
 
+export type ProviderElement = {
+  provider: string;
+  owner_id: string;
+  owner_type: string;
+  owner_name: string;
+  capability: string;
+  external_id: string;
+};
+
+const OWNER_LABEL: Record<string, string> = {
+  characters: "character",
+  locations: "location",
+  elements: "element",
+  shots: "shot",
+};
+
+/**
+ * The single home for the active-provider-identity query. The generation
+ * package prints these; preflight uses the same rows to find assets that
+ * have no identity registered yet.
+ */
+export async function fetchProviderElements(
+  supabase: DB,
+  ownerIds: string[],
+  labelFor: (ownerId: string) => string,
+): Promise<ProviderElement[]> {
+  if (!ownerIds.length) return [];
+  const { data } = await supabase
+    .from("provider_identities")
+    .select("provider, capability, external_id, owner_type, owner_id, status")
+    .eq("status", "active")
+    .in("owner_id", ownerIds);
+  return (data ?? [])
+    .map((pi) => ({
+      provider: pi.provider,
+      owner_id: pi.owner_id,
+      owner_type: OWNER_LABEL[pi.owner_type] ?? pi.owner_type,
+      owner_name: labelFor(pi.owner_id),
+      capability: pi.capability ?? "—",
+      external_id: pi.external_id,
+    }))
+    .sort(
+      (a, b) =>
+        a.provider.localeCompare(b.provider) ||
+        a.owner_type.localeCompare(b.owner_type) ||
+        a.owner_name.localeCompare(b.owner_name) ||
+        a.external_id.localeCompare(b.external_id),
+    );
+}
+
 /**
  * Compiles the full generation context for a shot. Parameterized by a Supabase
  * client so the browser (RLS as the user) and the MCP server route (scoped
