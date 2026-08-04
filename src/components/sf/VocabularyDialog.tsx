@@ -44,13 +44,27 @@ export function VocabularyDialog({
   async function writeOverride(table: Table, row: VocabRow, patch: Record<string, unknown>) {
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
+    // The columns a project override must carry over from the global row it
+    // shadows, so hiding or re-describing one never drops its craft payload.
     const base =
       table === "camera_moves"
         ? {
             is_time_move: (row as CameraMoveRow).is_time_move,
             implies_motion: (row as CameraMoveRow).implies_motion,
           }
-        : { guidance: (row as RiskClassRow).guidance };
+        : table === "risk_classes"
+          ? { guidance: (row as RiskClassRow).guidance }
+          : table === "sheet_checklist_items"
+            ? { reason: (row as SheetChecklistRow).reason }
+            : table === "model_rates"
+              ? {
+                  provider: (row as ModelRateRow).provider,
+                  model: (row as ModelRateRow).model,
+                  resolution: (row as ModelRateRow).resolution,
+                  credits_per_second: (row as ModelRateRow).credits_per_second,
+                }
+              : {};
+
     const error = row.project_id
       ? (
           await supabase
