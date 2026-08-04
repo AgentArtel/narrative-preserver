@@ -221,6 +221,8 @@ export type Database = {
           description: string | null
           id: string
           project_id: string
+          retired_at: string | null
+          retired_reason: string | null
           source_frame_id: string | null
           subject_id: string
           subject_type: Database["public"]["Enums"]["canon_subject"]
@@ -232,6 +234,8 @@ export type Database = {
           description?: string | null
           id?: string
           project_id: string
+          retired_at?: string | null
+          retired_reason?: string | null
           source_frame_id?: string | null
           subject_id: string
           subject_type: Database["public"]["Enums"]["canon_subject"]
@@ -243,6 +247,8 @@ export type Database = {
           description?: string | null
           id?: string
           project_id?: string
+          retired_at?: string | null
+          retired_reason?: string | null
           source_frame_id?: string | null
           subject_id?: string
           subject_type?: Database["public"]["Enums"]["canon_subject"]

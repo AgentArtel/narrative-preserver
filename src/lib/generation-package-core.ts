@@ -113,7 +113,9 @@ export async function buildGenerationPackageWith(
     shot.look_id
       ? supabase.from("looks").select("*").eq("id", shot.look_id).maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase.from("canon_records").select("*").eq("project_id", projectId),
+    // Retired canon stays readable as history but is never asserted to the
+    // model — a superseded design must stop riding into the package.
+    supabase.from("canon_records").select("*").eq("project_id", projectId).is("retired_at", null),
     supabase
       .from("shots")
       .select("id, shot_number, sort_order, frames(image_url, is_approved)")
@@ -311,7 +313,6 @@ export async function buildGenerationPackageWith(
   const providerElements = await fetchProviderElements(supabase, identityOwnerIds, (ownerId) =>
     ownerId === shot.id ? `Shot ${shot.shot_number}` : (nameById.get(ownerId) ?? "Unknown"),
   );
-
 
   if (providerElements.length) {
     const peLines: string[] = [];

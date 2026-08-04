@@ -64,7 +64,8 @@ export function LibraryPage({
           .from("canon_records")
           .select("*")
           .eq("project_id", projectId)
-          .eq("subject_type", subjectType),
+          .eq("subject_type", subjectType)
+          .is("retired_at", null),
         supabase.from("reference_links").select("*, asset_references(*)").eq("owner_type", table),
       ]);
       if (rowsRes.error) throw rowsRes.error;
