@@ -810,7 +810,8 @@ export const TOOLS: Tool[] = [
   {
     name: "create_shot",
     description:
-      "Create a shot in a scene, appended at the end with status 'idea'. camera.movement should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
+      "Create a shot in a scene, appended at the end with status 'idea'. The camera move is read from `camera.movement` and should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
+
     inputSchema: schema(
       {
         scene_id: S.string,
