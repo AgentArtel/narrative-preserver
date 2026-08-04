@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,14 @@ import { importGenerationResults } from "@/lib/import-results";
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Check, Package, Sparkles, Upload } from "lucide-react";
+import { Check, Network, Package, Sparkles, Upload } from "lucide-react";
+
+// Lazy: the inspector pulls in React Flow, which is ~185 kB on its own. Loading
+// it eagerly would make this page — the most visited in the app — 10x heavier
+// for every session, including the ones that never open the dialog.
+const DependencyInspector = lazy(() =>
+  import("@/components/sf/DependencyInspector").then((m) => ({ default: m.DependencyInspector })),
+);
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/shot/$shotId")({
   head: () => ({
@@ -51,6 +58,7 @@ function ShotDetail() {
   const qc = useQueryClient();
   const [compare, setCompare] = useState<string[]>([]);
   const [pkgOpen, setPkgOpen] = useState(false);
+  const [depsOpen, setDepsOpen] = useState(false);
   const [canonFrame, setCanonFrame] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [importingId, setImportingId] = useState<string | null>(null);
@@ -219,6 +227,9 @@ function ShotDetail() {
           </h1>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setDepsOpen(true)}>
+            <Network className="size-4" /> Dependencies
+          </Button>
           <Button variant="outline" onClick={() => setPkgOpen(true)}>
             <Package className="size-4" /> Generation package
           </Button>
@@ -432,6 +443,17 @@ function ShotDetail() {
       </div>
 
       <GenerationPackageDialog shotId={shotId} open={pkgOpen} onOpenChange={setPkgOpen} />
+      {/* Mounted only once opened, so the React Flow chunk is fetched on demand. */}
+      {depsOpen && (
+        <Suspense fallback={null}>
+          <DependencyInspector
+            projectId={projectId}
+            shotId={shotId}
+            open={depsOpen}
+            onOpenChange={setDepsOpen}
+          />
+        </Suspense>
+      )}
       <PromoteToCanonDialog
         shotId={shotId}
         projectId={projectId}
