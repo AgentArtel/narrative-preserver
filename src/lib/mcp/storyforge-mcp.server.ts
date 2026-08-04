@@ -1163,8 +1163,14 @@ export const TOOLS: Tool[] = [
         "frames",
         sourceId,
         "id, shot_id, kind, derived_from_frame_id",
-      )) as { shot_id: string; kind: FrameKind; derived_from_frame_id: string | null };
+      )) as {
+        id: string;
+        shot_id: string;
+        kind: FrameKind;
+        derived_from_frame_id: string | null;
+      };
       const blocked = editLineageBlock(source);
+
       if (blocked) throw new Error(blocked);
       const row = await insertRow(
         ctx,
