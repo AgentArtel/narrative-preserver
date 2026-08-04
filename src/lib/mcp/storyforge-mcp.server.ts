@@ -41,7 +41,6 @@ import {
 import { runPreflight } from "@/lib/preflight-core";
 import { approveFrameFor, revokeFrameApproval, DEFAULT_PURPOSE } from "@/lib/approvals-core";
 
-
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
 const OWNER_TYPES = ["characters", "locations", "elements", "shots"] as const;
@@ -268,6 +267,17 @@ async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
     location = (data ?? null) as Record<string, unknown> | null;
   }
 
+  // pair_keyframes checks the form against the move at the moment of pairing.
+  // The move can change afterwards, so re-check it here too — otherwise a shot
+  // paired as locked_camera and later given a dolly never gets flagged again.
+  // Every pair, not just the newest: shot_id is not unique and KeyframePairs.tsx
+  // lints them all, so reporting on one would make the two surfaces disagree.
+  const { data: pairs } = await ctx.db
+    .from("keyframe_pairs")
+    .select("form")
+    .eq("shot_id", shotId)
+    .eq("user_id", ctx.userId);
+
   return [
     ...lintShotLine({
       line: shot.description,
@@ -281,9 +291,9 @@ async function shotCraftWarnings(ctx: Ctx, shotId: string): Promise<string[]> {
       asRiskTail(shot.risk_tail),
       mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
     ),
+    ...(pairs ?? []).flatMap((p) => keyframeFormWarnings(p.form, movement, moveRows)),
   ];
 }
-
 
 export const TOOLS: Tool[] = [
   {
@@ -1003,7 +1013,6 @@ export const TOOLS: Tool[] = [
         preflight,
       };
     },
-
   },
   {
     name: "add_frames",
@@ -1202,12 +1211,7 @@ export const TOOLS: Tool[] = [
       let projectId: string | null = null;
 
       if (shotId) {
-        const shot = (await own(
-          ctx,
-          "shots",
-          shotId,
-          "id, description, camera, location_id",
-        )) as {
+        const shot = (await own(ctx, "shots", shotId, "id, description, camera, location_id")) as {
           description: string | null;
           camera: unknown;
           location_id: string | null;
@@ -1348,9 +1352,7 @@ export const TOOLS: Tool[] = [
         checklist,
         verdicts,
         summary: sheetSummary(items, verdicts),
-        prior_verdict: prior
-          ? { ...prior, verdicts: asSheetVerdicts(prior.verdicts) }
-          : null,
+        prior_verdict: prior ? { ...prior, verdicts: asSheetVerdicts(prior.verdicts) } : null,
       };
     },
   },
