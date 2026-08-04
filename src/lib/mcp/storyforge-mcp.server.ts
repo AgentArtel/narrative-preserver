@@ -1097,37 +1097,284 @@ export const TOOLS: Tool[] = [
   {
     name: "approve_frame",
     description:
-      "Approve a frame: unapproves sibling frames on the shot and moves the shot to 'approved' unless it is already 'final'.",
+      "Approve a frame for a purpose. Approval is scoped, not global: the same frame can be a pass as an armour design and a hold as a face reference. Omitting purpose approves for 'default', which keeps the single approved frame per shot and moves the shot to 'approved' unless it is already 'final'.",
+    inputSchema: schema({ frame_id: S.string, purpose: S.string, note: S.string }, ["frame_id"]),
+    handler: async (ctx, a) => {
+      const frameId = str(a, "frame_id");
+      await own(ctx, "frames", frameId);
+      const purpose = optStr(a, "purpose") ?? DEFAULT_PURPOSE;
+      return approveFrameFor(ctx.db, {
+        userId: ctx.userId,
+        frameId,
+        purpose,
+        note: optStr(a, "note"),
+      });
+    },
+  },
+  {
+    name: "revoke_frame_approval",
+    description:
+      "Withdraw a frame's approval for one purpose. Other purposes are untouched — a hold as a face reference does not undo a pass as an armour design.",
+    inputSchema: schema({ frame_id: S.string, purpose: S.string }, ["frame_id", "purpose"]),
+    handler: async (ctx, a) => {
+      const frameId = str(a, "frame_id");
+      await own(ctx, "frames", frameId);
+      return revokeFrameApproval(ctx.db, {
+        userId: ctx.userId,
+        frameId,
+        purpose: str(a, "purpose"),
+      });
+    },
+  },
+  {
+    name: "list_frame_approvals",
+    description: "List every purpose a frame is approved for, with who approved it and when.",
     inputSchema: schema({ frame_id: S.string }, ["frame_id"]),
     handler: async (ctx, a) => {
       const frameId = str(a, "frame_id");
-      const frame = (await own(ctx, "frames", frameId, "id, shot_id")) as { shot_id: string };
-      const shot = (await own(ctx, "shots", frame.shot_id, "id, status")) as { status: ShotStatus };
-      await ctx.db
-        .from("frames")
-        .update({ is_approved: false })
-        .eq("shot_id", frame.shot_id)
-        .eq("user_id", ctx.userId);
-      const { error } = await ctx.db
-        .from("frames")
-        .update({ is_approved: true })
-        .eq("id", frameId)
-        .eq("user_id", ctx.userId);
+      await own(ctx, "frames", frameId);
+      const { data, error } = await ctx.db
+        .from("frame_approvals")
+        .select("purpose, note, approved_at, approved_by")
+        .eq("frame_id", frameId)
+        .eq("user_id", ctx.userId)
+        .order("approved_at", { ascending: false });
       if (error) throw new Error(error.message);
-      if (shot.status !== "final") {
-        await ctx.db
-          .from("shots")
-          .update({ status: "approved" })
-          .eq("id", frame.shot_id)
-          .eq("user_id", ctx.userId);
+      return { frame_id: frameId, approvals: data ?? [] };
+    },
+  },
+  {
+    name: "record_frame_edit",
+    description:
+      "Register a new frame as an edit derived from an existing master. Editing a frame that is itself already an edit is refused: every edit pass silently re-renders the whole image, so damage is cumulative and invisible per step — composite the change back onto the original master instead of chaining.",
+    inputSchema: schema(
+      {
+        source_frame_id: S.string,
+        image_url: S.string,
+        is_composite: { type: "boolean" },
+        notes: S.string,
+      },
+      ["source_frame_id", "image_url"],
+    ),
+    handler: async (ctx, a) => {
+      const sourceId = str(a, "source_frame_id");
+      const source = (await own(
+        ctx,
+        "frames",
+        sourceId,
+        "id, shot_id, kind, derived_from_frame_id",
+      )) as { shot_id: string; kind: FrameKind; derived_from_frame_id: string | null };
+      const blocked = editLineageBlock(source);
+      if (blocked) throw new Error(blocked);
+      const row = await insertRow(
+        ctx,
+        "frames",
+        {
+          shot_id: source.shot_id,
+          image_url: str(a, "image_url"),
+          kind: source.kind,
+          is_approved: false,
+          derived_from_frame_id: sourceId,
+          is_composite: a.is_composite === true,
+          notes: optStr(a, "notes"),
+        },
+        "id",
+      );
+      return { frame_id: row.id, derived_from_frame_id: sourceId, shot_id: source.shot_id };
+    },
+  },
+  {
+    name: "lint_shot_line",
+    description:
+      "Lint a shot line against the shot-line grammar: camera move declared in the first three words and present in the project's camera vocabulary, at least one named landmark from the location referenced, and slow motion fused to a framing rather than standing bare. Warns; never refuses a save.",
+    inputSchema: schema({ shot_id: S.string, line: S.string, location_id: S.string }),
+    handler: async (ctx, a) => {
+      const shotId = optStr(a, "shot_id");
+      let line = optStr(a, "line");
+      let movement: string | null = null;
+      let locationId = optStr(a, "location_id");
+      let projectId: string | null = null;
+
+      if (shotId) {
+        const shot = (await own(
+          ctx,
+          "shots",
+          shotId,
+          "id, description, camera, location_id",
+        )) as {
+          description: string | null;
+          camera: unknown;
+          location_id: string | null;
+        };
+        line = line ?? shot.description;
+        movement = ((shot.camera ?? {}) as { movement?: string }).movement ?? null;
+        locationId = locationId ?? shot.location_id;
+        projectId = await projectIdForShot(ctx, shotId);
       }
+      if (!line) throw new Error("Provide a shot_id or a line to lint");
+
+      let location: Record<string, unknown> | null = null;
+      if (locationId) {
+        const { data } = await ctx.db
+          .from("locations")
+          .select(LOCATION_SELECT)
+          .eq("id", locationId)
+          .eq("user_id", ctx.userId)
+          .maybeSingle();
+        location = (data ?? null) as Record<string, unknown> | null;
+      }
+      const filter = projectId
+        ? `project_id.is.null,project_id.eq.${projectId}`
+        : "project_id.is.null";
+      const { data: moveRows } = await ctx.db.from("camera_moves").select("*").or(filter);
+      const warnings = lintShotLine({
+        line,
+        movement,
+        moves: mergeVocab((moveRows ?? []) as unknown as CameraMoveRow[]),
+        landmarks: asLandmarks(location?.landmarks),
+        blockingAnchor: (location?.blocking_anchor as string | null) ?? null,
+        locationName: (location?.name as string | null) ?? null,
+      });
+      return { line, movement, warnings, warning_text: warnings.map(warningText) };
+    },
+  },
+  {
+    name: "check_location_ready",
+    description:
+      "Report which of the five location locks are unset and whether a reverse has been verified, in production terms: what this plate is usable for and what it is not. A plate with no verified reverse can still serve a single-angle shot; it cannot serve as a diagnostic baseline.",
+    inputSchema: schema({ location_id: S.string }, ["location_id"]),
+    handler: async (ctx, a) => {
+      const locationId = str(a, "location_id");
+      await own(ctx, "locations", locationId);
+      const { data } = await ctx.db
+        .from("locations")
+        .select(LOCATION_SELECT)
+        .eq("id", locationId)
+        .eq("user_id", ctx.userId)
+        .maybeSingle();
+      const readiness = checkLocationReady(data as never, (data as { name?: string })?.name);
       return {
-        frame_id: frameId,
-        shot_id: frame.shot_id,
-        shot_status: shot.status === "final" ? "final" : "approved",
+        location_id: locationId,
+        ...readiness,
+        warning_text: readiness.warnings.map(warningText),
       };
     },
   },
+  {
+    name: "check_sheet",
+    description:
+      "Walk the character-sheet checklist against a frame and record the verdict. It cannot inspect pixels: pass/fail/na per item, with the reason for each item shipped beside it. Calling it with no verdicts returns the checklist and any prior verdict for that frame.",
+    inputSchema: schema(
+      {
+        frame_id: S.string,
+        character_id: S.string,
+        note: S.string,
+        verdicts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              item: S.string,
+              verdict: { type: "string", enum: [...SHEET_VERDICTS] },
+              note: S.string,
+            },
+            required: ["item", "verdict"],
+            additionalProperties: false,
+          },
+        },
+      },
+      ["frame_id"],
+    ),
+    handler: async (ctx, a) => {
+      const frameId = str(a, "frame_id");
+      await own(ctx, "frames", frameId);
+      const characterId = optStr(a, "character_id");
+      if (characterId) await own(ctx, "characters", characterId);
+
+      const { data: itemRows } = await ctx.db.from("sheet_checklist_items").select("*");
+      const items = mergeVocab((itemRows ?? []) as unknown as SheetChecklistRow[]);
+
+      const { data: prior } = await ctx.db
+        .from("sheet_checks")
+        .select("id, verdicts, note, checked_at, checked_by, character_id")
+        .eq("frame_id", frameId)
+        .eq("user_id", ctx.userId)
+        .maybeSingle();
+
+      const checklist = items.map((i) => ({
+        slug: i.slug,
+        label: i.label,
+        reason: i.reason,
+      }));
+
+      if (a.verdicts === undefined) {
+        const priorVerdicts = asSheetVerdicts(prior?.verdicts);
+        return {
+          frame_id: frameId,
+          checklist,
+          prior_verdict: prior
+            ? { ...prior, verdicts: priorVerdicts, summary: sheetSummary(items, priorVerdicts) }
+            : null,
+        };
+      }
+
+      const verdicts = asSheetVerdicts(a.verdicts);
+      const payload = {
+        frame_id: frameId,
+        character_id: characterId,
+        verdicts: verdicts as never,
+        note: optStr(a, "note"),
+        checked_by: ctx.userId,
+        checked_at: new Date().toISOString(),
+      };
+      if (prior) {
+        const { error } = await ctx.db
+          .from("sheet_checks")
+          .update(payload as never)
+          .eq("id", prior.id)
+          .eq("user_id", ctx.userId);
+        if (error) throw new Error(error.message);
+      } else {
+        await insertRow(ctx, "sheet_checks", payload, "id");
+      }
+      return {
+        frame_id: frameId,
+        checklist,
+        verdicts,
+        summary: sheetSummary(items, verdicts),
+        prior_verdict: prior
+          ? { ...prior, verdicts: asSheetVerdicts(prior.verdicts) }
+          : null,
+      };
+    },
+  },
+  {
+    name: "preflight_generation",
+    description:
+      "Run before a roll, over a project or a set of shots: unresolved Elements with no active provider identity, shots carrying three or more risk classes (three or more means it is really a sequence — split it), locations with unset locks or an unverified reverse, and the credit cost at the chosen tier with the previs equivalent beside it. It reports; it does not gate the roll.",
+    inputSchema: schema({
+      project_id: S.string,
+      shot_ids: S.stringArray,
+      tier: { type: "string", enum: [...GENERATION_TIERS] },
+      rate_slug: S.string,
+      seconds: S.number,
+    }),
+    handler: async (ctx, a) => {
+      const projectId = optStr(a, "project_id");
+      if (projectId) await own(ctx, "projects", projectId);
+      const tierRaw = optStr(a, "tier");
+      return runPreflight(ctx.db, ctx.userId, {
+        projectId,
+        shotIds: a.shot_ids === undefined ? undefined : strArray(a, "shot_ids"),
+        tier: tierRaw
+          ? oneOf(tierRaw, [...GENERATION_TIERS] as GenerationTier[], "generation tier")
+          : "previs",
+        rateSlug: optStr(a, "rate_slug"),
+        seconds: optNum(a, "seconds"),
+      });
+    },
+  },
+
   {
     name: "pair_keyframes",
     description:
