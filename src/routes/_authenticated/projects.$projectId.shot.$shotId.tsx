@@ -236,13 +236,19 @@ function ShotDetail() {
             )}
           </div>
           {approved && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <CanonMarker count={canonForFrame(approved.id)} />
-              <Button size="sm" variant="outline" onClick={() => setCanonFrame(approved.id)}>
-                <Sparkles className="size-4" /> Promote to canon
-              </Button>
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <CanonMarker count={canonForFrame(approved.id)} />
+                <Button size="sm" variant="outline" onClick={() => setCanonFrame(approved.id)}>
+                  <Sparkles className="size-4" /> Promote to canon
+                </Button>
+              </div>
+              <FrameApprovals frame={approved} purposes={vocab?.purposes ?? []} />
             </div>
           )}
+
+          <CraftWarnings warnings={shotWarnings} className="mt-4" />
+
 
           <div className="mt-8">
             <SectionLabel>Candidates ({candidates.length})</SectionLabel>
