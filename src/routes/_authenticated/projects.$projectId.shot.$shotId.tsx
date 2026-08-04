@@ -7,10 +7,17 @@ import { Chip, SectionLabel, StatusBadge, CanonMarker } from "@/components/sf/pr
 import { GenerationPackageDialog } from "@/components/sf/GenerationPackageDialog";
 import { PromoteToCanonDialog } from "@/components/sf/PromoteToCanonDialog";
 import { KeyframePairs } from "@/components/sf/KeyframePairs";
+import { CraftWarnings } from "@/components/sf/CraftWarnings";
+import { FrameApprovals } from "@/components/sf/FrameApprovals";
 import { useVocabularies } from "@/hooks/useVocabularies";
 import type { Camera } from "@/lib/storyforge";
+import { asLandmarks } from "@/lib/storyforge";
+import { lintShotLine } from "@/lib/validation";
+import { approveFrameFor, DEFAULT_PURPOSE } from "@/lib/approvals-core";
+import type { DB } from "@/lib/generation-package-core";
 import { uploadImage } from "@/lib/upload";
 import { importGenerationResults } from "@/lib/import-results";
+
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
