@@ -79,9 +79,11 @@ Two flags on each row carry meaning the name does not:
   move — \`"push, close slow-mo"\` — because \`"close slow-mo"\` by itself is exactly what
   the linter flags.
 - **\`implies_motion\`** — the a/b framings must differ; the frame is not locked off.
-  This is **not** the same as the camera travelling. A pivot or a roll changes the frame
-  between a and b without the camera going anywhere, so entries like a tilt or a dutch
-  angle can carry it. It exists to cross-check a pair's form: a \`locked_camera\` pair on
+  This is **not** the same as the camera travelling. A pivot changes the frame between a
+  and b without the camera going anywhere, which is why \`vertical_tilt\` ("pivots up or
+  down from a fixed position") and \`whip_pan\` both carry it while \`dutch_angle\` — a roll
+  that leaves the framing where it was — does not. It exists to cross-check a pair's form:
+  a \`locked_camera\` pair on
   a move that changes the frame, or a \`moving_camera\` pair on one that does not, is the
   most common failure in the pipeline, and the two need opposite instructions.
 
