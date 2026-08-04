@@ -110,6 +110,29 @@ function ShotDetail() {
       })
     : [];
 
+  // Scoped approvals, so a hold for one purpose is visible at a glance.
+  const { data: approvals } = useQuery({
+    queryKey: ["shot-frame-approvals", shotId, frames.map((f) => f.id).join(",")],
+    enabled: frames.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("frame_approvals")
+        .select("frame_id, purpose")
+        .in(
+          "frame_id",
+          frames.map((f) => f.id),
+        );
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const purposeLabel = (slug: string) =>
+    (vocab?.purposes ?? []).find((p) => p.slug === slug)?.label ?? slug;
+  const purposesFor = (frameId: string) =>
+    (approvals ?? []).filter((a) => a.frame_id === frameId).map((a) => a.purpose);
+
+
+
   async function approveFrame(frameId: string) {
     try {
       const { data: u } = await supabase.auth.getUser();
