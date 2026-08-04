@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useVocabularies } from "@/hooks/useVocabularies";
 import { UNDECLARED_MOVE_HINT, TIME_MOVE_HINT, normalizeToken } from "@/lib/craft";
 import type { CameraMoveRow, RiskClassRow, VocabRow } from "@/lib/craft";
+import type { ModelRateRow, SheetChecklistRow } from "@/lib/validation";
+
 import { toast } from "sonner";
 import { EyeOff, Plus, RotateCcw } from "lucide-react";
 
