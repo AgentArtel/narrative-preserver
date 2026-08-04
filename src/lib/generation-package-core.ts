@@ -258,37 +258,10 @@ export async function buildGenerationPackageWith(
     ...(shot.location_id ? [shot.location_id] : []),
     shot.id,
   ];
-  const { data: identities } = await supabase
-    .from("provider_identities")
-    .select("provider, capability, external_id, owner_type, owner_id, status")
-    .eq("status", "active")
-    .in("owner_id", identityOwnerIds);
+  const providerElements = await fetchProviderElements(supabase, identityOwnerIds, (ownerId) =>
+    ownerId === shot.id ? `Shot ${shot.shot_number}` : (nameById.get(ownerId) ?? "Unknown"),
+  );
 
-  const OWNER_LABEL: Record<string, string> = {
-    characters: "character",
-    locations: "location",
-    elements: "element",
-    shots: "shot",
-  };
-
-  const providerElements = (identities ?? [])
-    .map((pi) => ({
-      provider: pi.provider,
-      owner_type: OWNER_LABEL[pi.owner_type] ?? pi.owner_type,
-      owner_name:
-        pi.owner_id === shot.id
-          ? `Shot ${shot.shot_number}`
-          : (nameById.get(pi.owner_id) ?? "Unknown"),
-      capability: pi.capability ?? "—",
-      external_id: pi.external_id,
-    }))
-    .sort(
-      (a, b) =>
-        a.provider.localeCompare(b.provider) ||
-        a.owner_type.localeCompare(b.owner_type) ||
-        a.owner_name.localeCompare(b.owner_name) ||
-        a.external_id.localeCompare(b.external_id),
-    );
 
   if (providerElements.length) {
     const peLines: string[] = [];
