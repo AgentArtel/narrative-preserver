@@ -16,7 +16,13 @@ import type { CameraMoveRow, RiskClassRow, VocabRow } from "@/lib/craft";
 import { toast } from "sonner";
 import { EyeOff, Plus, RotateCcw } from "lucide-react";
 
-type Table = "camera_moves" | "risk_classes";
+type Table =
+  | "camera_moves"
+  | "risk_classes"
+  | "sheet_checklist_items"
+  | "model_rates"
+  | "approval_purposes";
+
 
 /**
  * The doctrine is days old and partly one team's habit promoted to law.
