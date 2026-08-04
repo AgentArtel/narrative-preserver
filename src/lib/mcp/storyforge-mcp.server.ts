@@ -26,6 +26,21 @@ import {
   type KeyframeForm,
   type RiskClassRow,
 } from "@/lib/craft";
+import {
+  GENERATION_TIERS,
+  SHEET_VERDICTS,
+  asSheetVerdicts,
+  checkLocationReady,
+  editLineageBlock,
+  lintShotLine,
+  sheetSummary,
+  warningText,
+  type GenerationTier,
+  type SheetChecklistRow,
+} from "@/lib/validation";
+import { runPreflight } from "@/lib/preflight-core";
+import { approveFrameFor, revokeFrameApproval, DEFAULT_PURPOSE } from "@/lib/approvals-core";
+
 
 const CANON_SUBJECTS: CanonSubject[] = ["character", "location", "element", "scene", "shot"];
 const GENERATION_STATUSES: GenerationStatus[] = ["handed_off", "imported", "rejected"];
