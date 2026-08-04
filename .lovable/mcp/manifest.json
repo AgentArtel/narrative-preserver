@@ -644,7 +644,7 @@
       {
         "name": "update_shot",
         "title": "update_shot",
-        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
+        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. The camera move is read from `camera.movement` — an undeclared move renders as a slow push-in. Status 'held_still' is a production decision — the shot ships as a still.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",

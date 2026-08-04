@@ -876,7 +876,8 @@ export const TOOLS: Tool[] = [
   {
     name: "update_shot",
     description:
-      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
+      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. The camera move is read from `camera.movement` — an undeclared move renders as a slow push-in. Status 'held_still' is a production decision — the shot ships as a still.",
+
     inputSchema: schema({ shot_id: S.string, patch: S.object }, ["shot_id", "patch"]),
     handler: async (ctx, a) => {
       const shotId = str(a, "shot_id");
