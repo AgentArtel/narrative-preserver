@@ -14,6 +14,7 @@ import {
 import type { CanonSubject, FrameKind, GenerationStatus, ShotStatus } from "@/lib/storyforge";
 import {
   DEPTH_PLANES,
+  GATES,
   KEYFRAME_FORMS,
   asDepthPlanes,
   asRiskTail,
@@ -21,6 +22,7 @@ import {
   keyframeFormWarnings,
   locationLockState,
   mergeVocab,
+  normalizeToken,
   vocabScope,
   riskTailWarnings,
   type CameraMoveRow,
@@ -52,6 +54,8 @@ import {
   type ModelRateRow,
   type SheetChecklistRow,
 } from "@/lib/validation";
+
+const GATE_VALUES = GATES.map((g) => g.value);
 
 const VOCABULARY_KINDS = [
   "camera_moves",
@@ -393,11 +397,15 @@ export const TOOLS: Tool[] = [
             .select("id, name, description, palette, prompt_fragments, negative_constraints")
             .eq("project_id", projectId)
             .eq("user_id", ctx.userId),
+          // Active only — list_canon and the compiled package both exclude
+          // retired records, and a count that disagrees with them makes
+          // retiring look like it did nothing.
           ctx.db
             .from("canon_records")
             .select("id", { count: "exact", head: true })
             .eq("project_id", projectId)
-            .eq("user_id", ctx.userId),
+            .eq("user_id", ctx.userId)
+            .is("retired_at", null),
           ctx.db.from("camera_moves").select("*").or(vocabScope(ctx.userId, projectId)),
           ctx.db.from("risk_classes").select("*").or(vocabScope(ctx.userId, projectId)),
         ],
@@ -448,18 +456,28 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "list_canon",
-    description: "List canon records for a project, optionally filtered by subject.",
-    inputSchema: schema({ project_id: S.string, subject_type: S.string, subject_id: S.string }, [
-      "project_id",
-    ]),
+    description:
+      "List canon records for a project, optionally filtered by subject. Retired records are excluded by default — they are history, not something the packages still assert. Pass include_retired to see them.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        subject_type: S.string,
+        subject_id: S.string,
+        include_retired: { type: "boolean" },
+      },
+      ["project_id"],
+    ),
     handler: async (ctx, a) => {
       const projectId = str(a, "project_id");
       await own(ctx, "projects", projectId);
       let q = ctx.db
         .from("canon_records")
-        .select("id, subject_type, subject_id, aspect, description, source_frame_id, created_at")
+        .select(
+          "id, subject_type, subject_id, aspect, description, source_frame_id, created_at, retired_at, retired_reason",
+        )
         .eq("project_id", projectId)
         .eq("user_id", ctx.userId);
+      if (a.include_retired !== true) q = q.is("retired_at", null);
       const st = optStr(a, "subject_type");
       if (st) q = q.eq("subject_type", oneOf(st, CANON_SUBJECTS, "subject_type"));
       const sid = optStr(a, "subject_id");
@@ -919,7 +937,7 @@ export const TOOLS: Tool[] = [
   {
     name: "update_shot",
     description:
-      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. The camera move is read from `camera.movement` — an undeclared move renders as a slow push-in. Status 'held_still' is a production decision — the shot ships as a still.",
+      "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Pass null for location_id or look_id to clear it. The camera move is read from `camera.movement` — an undeclared move renders as a slow push-in. Status 'held_still' is a production decision — the shot ships as a still.",
 
     inputSchema: schema({ shot_id: S.string, patch: S.object }, ["shot_id", "patch"]),
     handler: async (ctx, a) => {
@@ -1111,9 +1129,19 @@ export const TOOLS: Tool[] = [
         .eq("aspect", aspect)
         .maybeSingle();
       if (existing) {
+        // Re-promoting an aspect makes it canon again. Without clearing the
+        // retirement the update lands on a retired row and reports success,
+        // while the new description reaches no package and no default listing
+        // — which is exactly the supersede-a-design workflow retire_canon is
+        // for, failing silently.
         const { error } = await ctx.db
           .from("canon_records")
-          .update({ description, source_frame_id: sourceFrameId })
+          .update({
+            description,
+            source_frame_id: sourceFrameId,
+            retired_at: null,
+            retired_reason: null,
+          })
           .eq("id", existing.id)
           .eq("user_id", ctx.userId);
         if (error) throw new Error(error.message);
@@ -1557,6 +1585,407 @@ export const TOOLS: Tool[] = [
       };
     },
   },
+
+  /* ------------------------------------------- Phase 5: closing the loop */
+
+  {
+    name: "update_project",
+    description:
+      "Patch a project: gate, title, description, status. Advancing the gate is how a production moves; get_project_overview's pipeline block says what the current gate requires. Advancing past open pipeline items is allowed and reported back as warnings — the gates are a convention, not an enforcement.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        gate: { type: "string", enum: GATES.map((g) => g.value) },
+        title: S.string,
+        description: S.string,
+        status: S.string,
+      },
+      ["project_id"],
+    ),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      await own(ctx, "projects", projectId);
+      const patch: Record<string, unknown> = {};
+      const gate = optStr(a, "gate");
+      if (gate) patch.gate = oneOf(gate, GATE_VALUES, "gate");
+      for (const k of ["title", "description", "status"] as const) {
+        const v = optStr(a, k);
+        if (v !== null) patch[k] = v;
+      }
+      if (!Object.keys(patch).length) {
+        throw new Error(
+          "Nothing to update — pass at least one of gate, title, description, status",
+        );
+      }
+      const { error } = await ctx.db
+        .from("projects")
+        .update(patch as never)
+        .eq("id", projectId)
+        .eq("user_id", ctx.userId);
+      if (error) throw new Error(error.message);
+
+      // Reuse the overview's own reading of what is unfinished rather than
+      // re-deciding here what "ready to advance" means.
+      let warnings: string[] = [];
+      let omitted = 0;
+      if (patch.gate) {
+        const overview = await getOverview(ctx, projectId);
+        // Index 0 is always the gate requirement, reported separately below.
+        warnings = overview.pipeline.next_actions.slice(1);
+        omitted = overview.pipeline.next_actions_omitted ?? 0;
+      }
+      return {
+        project_id: projectId,
+        updated: Object.keys(patch),
+        gate_requires: patch.gate ? (GATE_REQUIREMENT[patch.gate as string] ?? null) : undefined,
+        still_open: warnings.length ? warnings : undefined,
+        still_open_omitted: omitted || undefined,
+      };
+    },
+  },
+  {
+    name: "list_frames",
+    description:
+      "Every frame on a shot with its id, kind, edit lineage and scoped approvals. Frame ids are otherwise only returned at the moment of insert, so a session that did not upload them cannot approve, pair or check a sheet against them.",
+    inputSchema: schema({ shot_id: S.string }, ["shot_id"]),
+    handler: async (ctx, a) => {
+      const shotId = str(a, "shot_id");
+      await own(ctx, "shots", shotId);
+      const frames = await ctx.db
+        .from("frames")
+        .select(
+          "id, image_url, kind, is_approved, derived_from_frame_id, is_composite, notes, created_at",
+        )
+        .eq("shot_id", shotId)
+        .eq("user_id", ctx.userId)
+        .order("created_at", { ascending: true });
+      if (frames.error) throw new Error(frames.error.message);
+      const frameIds = (frames.data ?? []).map((f) => (f as { id: string }).id);
+
+      // Scoped to these frames, like the shot page does. Reading every
+      // approval the account owns runs into PostgREST's row cap, and the rows
+      // that fall off the end make an approved frame report as unapproved
+      // with no error to notice.
+      const approvals = frameIds.length
+        ? await ctx.db
+            .from("frame_approvals")
+            .select("frame_id, purpose, note, approved_at")
+            .eq("user_id", ctx.userId)
+            .in("frame_id", frameIds)
+        : { data: [], error: null };
+      const byFrame = new Map<string, unknown[]>();
+      if (!approvals.error) {
+        for (const r of approvals.data ?? []) {
+          const row = r as { frame_id: string };
+          byFrame.set(row.frame_id, [...(byFrame.get(row.frame_id) ?? []), r]);
+        }
+      }
+      return {
+        shot_id: shotId,
+        frames: (frames.data ?? []).map((f) => ({
+          ...f,
+          approvals: byFrame.get((f as { id: string }).id) ?? [],
+          // The one refusal in the app, surfaced before the attempt.
+          editable: !(f as { derived_from_frame_id: string | null }).derived_from_frame_id,
+        })),
+        // Absent rather than empty when the Phase 3 table cannot be read.
+        approvals_unreadable: approvals.error ? approvals.error.message : undefined,
+      };
+    },
+  },
+  {
+    name: "list_generations",
+    description:
+      "Generation history for a shot or a whole project: tier, status, cost and when. Returns the prompt's length, not the prompt — packages are compiled fresh by get_context_package, never replayed from history.",
+    inputSchema: schema({ shot_id: S.string, project_id: S.string }),
+    handler: async (ctx, a) => {
+      const shotId = optStr(a, "shot_id");
+      const projectId = optStr(a, "project_id");
+      if (!shotId && !projectId) throw new Error("Pass a shot_id or a project_id");
+
+      let shotIds: string[];
+      if (shotId) {
+        await own(ctx, "shots", shotId);
+        shotIds = [shotId];
+      } else {
+        await own(ctx, "projects", projectId!);
+        shotIds = await projectShotIds(ctx, projectId!);
+        if (!shotIds.length) return { project_id: projectId, generations: [] };
+      }
+      const { data, error } = await ctx.db
+        .from("generations")
+        .select(
+          "id, shot_id, provider, tool, model, tier, status, cost_credits, prompt, created_at",
+        )
+        .in("shot_id", shotIds)
+        .eq("user_id", ctx.userId)
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return {
+        shot_id: shotId ?? undefined,
+        project_id: projectId ?? undefined,
+        generations: (data ?? []).map((g) => {
+          const row = g as { prompt: string | null } & Record<string, unknown>;
+          const { prompt, ...rest } = row;
+          return { ...rest, prompt_chars: prompt?.length ?? 0 };
+        }),
+      };
+    },
+  },
+  {
+    name: "update_generation",
+    description:
+      "Record what a generation turned out to be: status (handed_off / imported / rejected) and the credits it actually cost. Both land after the handoff, and a rejected render that is never marked rejected is counted as spend that bought something. The prompt of a logged handoff is a record, not a draft, and cannot be edited.",
+    inputSchema: schema(
+      {
+        generation_id: S.string,
+        status: { type: "string", enum: GENERATION_STATUSES },
+        cost_credits: S.number,
+      },
+      ["generation_id"],
+    ),
+    handler: async (ctx, a) => {
+      const generationId = str(a, "generation_id");
+      await own(ctx, "generations", generationId);
+      const patch: Record<string, unknown> = {};
+      const status = optStr(a, "status");
+      if (status) patch.status = oneOf(status, GENERATION_STATUSES, "generation status");
+      const cost = optNum(a, "cost_credits");
+      if (cost !== null) {
+        if (cost < 0) throw new Error("cost_credits cannot be negative");
+        patch.cost_credits = cost;
+      }
+      if (!Object.keys(patch).length) {
+        throw new Error("Nothing to update — pass status and/or cost_credits");
+      }
+      const { error } = await ctx.db
+        .from("generations")
+        .update(patch as never)
+        .eq("id", generationId)
+        .eq("user_id", ctx.userId);
+      if (error) throw new Error(error.message);
+      return { generation_id: generationId, updated: Object.keys(patch) };
+    },
+  },
+  {
+    name: "remove_character_from_shot",
+    description:
+      "Unwire a character from a shot. Removing what is not attached is a no-op, not an error.",
+    inputSchema: schema({ shot_id: S.string, character_id: S.string }, ["shot_id", "character_id"]),
+    handler: (ctx, a) =>
+      removeJoin(ctx, "shot_characters", "character_id", str(a, "shot_id"), str(a, "character_id")),
+  },
+  {
+    name: "remove_element_from_shot",
+    description:
+      "Unwire an element from a shot. Removing what is not attached is a no-op, not an error.",
+    inputSchema: schema({ shot_id: S.string, element_id: S.string }, ["shot_id", "element_id"]),
+    handler: (ctx, a) =>
+      removeJoin(ctx, "shot_elements", "element_id", str(a, "shot_id"), str(a, "element_id")),
+  },
+  {
+    name: "update_sequence",
+    description:
+      "Patch a sequence's title, or reorder a project's sequences by passing the full ordered id list. The list must name every sequence in that project — a partial list would renumber a subset on top of its untouched siblings.",
+    inputSchema: schema({ sequence_id: S.string, title: S.string, order: S.stringArray }),
+    handler: async (ctx, a) => {
+      if (Array.isArray(a.order)) {
+        return reorder(ctx, "sequences", strArray(a, "order"));
+      }
+      const sequenceId = str(a, "sequence_id");
+      await own(ctx, "sequences", sequenceId);
+      const title = str(a, "title");
+      const { error } = await ctx.db
+        .from("sequences")
+        .update({ title })
+        .eq("id", sequenceId)
+        .eq("user_id", ctx.userId);
+      if (error) throw new Error(error.message);
+      return { sequence_id: sequenceId, updated: ["title"] };
+    },
+  },
+  {
+    name: "update_scene",
+    description:
+      "Patch a scene's title, brief or status, or reorder a sequence's scenes by passing the full ordered id list. The list must name every scene in that sequence — a partial list would renumber a subset on top of its untouched siblings. Re-cutting scene order is normal G6 work.",
+    inputSchema: schema({
+      scene_id: S.string,
+      title: S.string,
+      brief: S.string,
+      status: S.string,
+      order: S.stringArray,
+    }),
+    handler: async (ctx, a) => {
+      if (Array.isArray(a.order)) return reorder(ctx, "scenes", strArray(a, "order"));
+      const sceneId = str(a, "scene_id");
+      await own(ctx, "scenes", sceneId);
+      const patch: Record<string, unknown> = {};
+      for (const k of ["title", "brief", "status"] as const) {
+        const v = optStr(a, k);
+        if (v !== null) patch[k] = v;
+      }
+      if (!Object.keys(patch).length) {
+        throw new Error("Nothing to update — pass title, brief, status, or an order list");
+      }
+      const { error } = await ctx.db
+        .from("scenes")
+        .update(patch as never)
+        .eq("id", sceneId)
+        .eq("user_id", ctx.userId);
+      if (error) throw new Error(error.message);
+      return { scene_id: sceneId, updated: Object.keys(patch) };
+    },
+  },
+  {
+    name: "upsert_vocabulary_row",
+    description:
+      "Add or edit one row in a project's vocabulary — camera moves, risk classes, the sheet checklist, the model rate card, approval purposes. A fourteenth camera move is an edit, not a deploy. Always writes a PROJECT row, never a global one. Reusing a seeded slug overrides that seed for this project only and inherits every field you do not pass, so changing a label cannot silently reset a flag; hidden:true is how a seed is dropped from a project without deleting anything globally. A slug with no seed behind it is a new row and needs a label.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        kind: { type: "string", enum: VOCABULARY_KINDS },
+        slug: S.string,
+        label: S.string,
+        description: S.string,
+        hidden: { type: "boolean" },
+        sort_order: S.number,
+        is_time_move: { type: "boolean" },
+        implies_motion: { type: "boolean" },
+        guidance: S.string,
+        reason: S.string,
+        provider: S.string,
+        model: S.string,
+        resolution: S.string,
+        credits_per_second: S.number,
+      },
+      ["project_id", "kind", "slug"],
+    ),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      await own(ctx, "projects", projectId);
+      const kind = oneOf(str(a, "kind"), VOCABULARY_KINDS, "vocabulary kind");
+      const table = VOCABULARY_TABLES[kind];
+      const slug = normalizeToken(str(a, "slug"));
+      if (!slug) throw new Error("slug must contain at least one letter or digit");
+
+      const fields: Record<string, unknown> = {};
+      const put = (k: string, v: unknown) => {
+        if (v !== null && v !== undefined) fields[k] = v;
+      };
+      put("label", optStr(a, "label"));
+      put("description", optStr(a, "description"));
+      put("sort_order", optNum(a, "sort_order"));
+      if (typeof a.hidden === "boolean") fields.hidden = a.hidden;
+      if (kind === "camera_moves") {
+        if (typeof a.is_time_move === "boolean") fields.is_time_move = a.is_time_move;
+        if (typeof a.implies_motion === "boolean") fields.implies_motion = a.implies_motion;
+      }
+      if (kind === "risk_classes") put("guidance", optStr(a, "guidance"));
+      if (kind === "sheet_checklist") put("reason", optStr(a, "reason"));
+      if (kind === "model_rates") {
+        put("provider", optStr(a, "provider"));
+        put("model", optStr(a, "model"));
+        put("resolution", optStr(a, "resolution"));
+        put("credits_per_second", optNum(a, "credits_per_second"));
+      }
+
+      const existing = await ctx.db
+        .from(table as never)
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("user_id", ctx.userId)
+        .eq("slug", slug)
+        .maybeSingle();
+      // Not every one of these tables has a unique (project_id, slug) index, so
+      // a swallowed error here would fall through and create a duplicate row —
+      // and mergeVocab's last-write-wins would then be nondeterministic.
+      if (existing.error) throw new Error(existing.error.message);
+
+      if (existing.data) {
+        if (!Object.keys(fields).length) {
+          throw new Error("Nothing to update on the existing row — pass a field to change");
+        }
+        const rowId = (existing.data as { id: string }).id;
+        const { error } = await ctx.db
+          .from(table as never)
+          .update(fields as never)
+          .eq("id", rowId)
+          .eq("user_id", ctx.userId);
+        if (error) throw new Error(error.message);
+        return { kind, slug, row_id: rowId, created: false, overrides_seed: undefined };
+      }
+
+      // Overriding a seed means starting FROM the seed. mergeVocab replaces the
+      // global row wholesale rather than merging field by field, so a project
+      // row built only from what the caller passed silently resets everything
+      // else to the column defaults — `implies_motion` defaults to true, which
+      // would make every static shot demand a moving-camera keyframe pair.
+      const seed = await ctx.db
+        .from(table as never)
+        .select("*")
+        .is("project_id", null)
+        .is("user_id", null)
+        .eq("slug", slug)
+        .maybeSingle();
+      if (seed.error) throw new Error(seed.error.message);
+
+      let base: Record<string, unknown> = {};
+      if (seed.data) {
+        // Identity and ownership columns belong to the new row, not the seed.
+        const {
+          id: _id,
+          user_id: _u,
+          project_id: _p,
+          created_at: _c,
+          updated_at: _up,
+          ...rest
+        } = seed.data as Record<string, unknown>;
+        base = rest;
+      }
+      const merged = { ...base, ...fields };
+
+      // The scope CHECK requires user_id and project_id together — insertRow
+      // stamps user_id, so this tool can never write a global row.
+      if (!merged.label) {
+        throw new Error(
+          `No seeded "${slug}" to override, so this is a new ${kind} row and needs a label`,
+        );
+      }
+      if (kind === "model_rates") {
+        for (const req of ["credits_per_second", "model", "resolution"] as const) {
+          if (merged[req] === undefined || merged[req] === null) {
+            throw new Error(`A new rate-card row needs ${req}`);
+          }
+        }
+      }
+      const row = await insertRow(ctx, table, { project_id: projectId, slug, ...merged }, "id");
+      return { kind, slug, row_id: row.id, created: true, overrides_seed: !!seed.data };
+    },
+  },
+  {
+    name: "retire_canon",
+    description:
+      "Stop asserting a canon record without deleting it. A superseded design otherwise keeps riding into every compiled package. Retired records stay readable through list_canon with include_retired, and are excluded from get_context_package, the project canon count and the dependency graph. Pass restore:true to un-retire — or simply promote_canon the same subject+aspect again, which un-retires it with the new description.",
+    inputSchema: schema(
+      { canon_record_id: S.string, reason: S.string, restore: { type: "boolean" } },
+      ["canon_record_id"],
+    ),
+    handler: async (ctx, a) => {
+      const canonId = str(a, "canon_record_id");
+      await own(ctx, "canon_records", canonId);
+      const restore = a.restore === true;
+      const patch = restore
+        ? { retired_at: null, retired_reason: null }
+        : { retired_at: new Date().toISOString(), retired_reason: optStr(a, "reason") };
+      const { error } = await ctx.db
+        .from("canon_records")
+        .update(patch as never)
+        .eq("id", canonId)
+        .eq("user_id", ctx.userId);
+      if (error) throw new Error(error.message);
+      return { canon_record_id: canonId, retired: !restore };
+    },
+  },
 ];
 
 /* ---------------------------------------------------- pipeline position */
@@ -1841,6 +2270,121 @@ function vocabLine(r: VocabRow): string {
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/** The overview's own reading of what is unfinished — reused rather than
+ *  re-deciding here what "ready to advance a gate" means. */
+async function getOverview(ctx: Ctx, projectId: string) {
+  const tool = TOOLS.find((t) => t.name === "get_project_overview");
+  if (!tool) throw new Error("get_project_overview is not registered");
+  return (await tool.handler(ctx, { project_id: projectId })) as {
+    pipeline: { next_actions: string[]; next_actions_omitted?: number };
+  };
+}
+
+/** Every shot id under a project, via its sequence → scene chain.
+ *
+ *  Throws on a failed read rather than returning []. An empty list means "this
+ *  project has no shots"; swallowing the error would make list_generations
+ *  report a production as having rendered nothing, which is the opposite
+ *  decision from "I could not find out". */
+async function projectShotIds(ctx: Ctx, projectId: string): Promise<string[]> {
+  const seqs = await ctx.db
+    .from("sequences")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", ctx.userId);
+  if (seqs.error) throw new Error(seqs.error.message);
+  const seqIds = (seqs.data ?? []).map((s) => (s as { id: string }).id);
+  if (!seqIds.length) return [];
+  const scenes = await ctx.db
+    .from("scenes")
+    .select("id")
+    .in("sequence_id", seqIds)
+    .eq("user_id", ctx.userId);
+  if (scenes.error) throw new Error(scenes.error.message);
+  const sceneIds = (scenes.data ?? []).map((s) => (s as { id: string }).id);
+  if (!sceneIds.length) return [];
+  const shots = await ctx.db
+    .from("shots")
+    .select("id")
+    .in("scene_id", sceneIds)
+    .eq("user_id", ctx.userId);
+  if (shots.error) throw new Error(shots.error.message);
+  return (shots.data ?? []).map((s) => (s as { id: string }).id);
+}
+
+/** The inverse of addJoin. Detaching what is not attached is not an error —
+ *  but it must not be reported as a completed removal either, because the
+ *  usual cause is the caller naming the wrong asset id. */
+async function removeJoin(
+  ctx: Ctx,
+  table: "shot_characters" | "shot_elements",
+  fkColumn: "character_id" | "element_id",
+  shotId: string,
+  assetId: string,
+) {
+  await own(ctx, "shots", shotId);
+  const { data, error } = await ctx.db
+    .from(table as never)
+    .delete()
+    .eq("shot_id", shotId)
+    .eq(fkColumn, assetId)
+    .eq("user_id", ctx.userId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  const removed = (data ?? []).length;
+  return {
+    shot_id: shotId,
+    [fkColumn]: assetId,
+    removed: removed > 0,
+    note: removed ? undefined : "Nothing was attached with that id — nothing changed.",
+  };
+}
+
+/** Rewrites sort_order to match the given id order. The caller passes the full
+ *  list for one parent, the way the editors' drag-reorder does — pairwise
+ *  swaps over MCP would need a read-modify-write the caller cannot make atomic. */
+async function reorder(ctx: Ctx, table: "sequences" | "scenes", ids: string[]) {
+  if (!ids.length) throw new Error("order must contain at least one id");
+  if (new Set(ids).size !== ids.length) throw new Error("order contains duplicate ids");
+
+  const parentColumn = table === "scenes" ? "sequence_id" : "project_id";
+  const rows = await Promise.all(
+    ids.map((id) => own(ctx, table, id, `id, ${parentColumn}`) as Promise<Record<string, unknown>>),
+  );
+
+  // One parent, and all of its children. Renumbering a subset — or ids drawn
+  // from two parents — writes 0..n-1 over sibling rows that already hold those
+  // values, and sort_order decides the shot order the whole manifest rests on.
+  const parents = new Set(rows.map((r) => String(r[parentColumn])));
+  if (parents.size > 1) {
+    throw new Error(`order must list ${table} from a single ${parentColumn} — got ${parents.size}`);
+  }
+  const parentId = [...parents][0];
+  const siblings = await ctx.db
+    .from(table as never)
+    .select("id")
+    .eq(parentColumn, parentId)
+    .eq("user_id", ctx.userId);
+  if (siblings.error) throw new Error(siblings.error.message);
+  const siblingIds = (siblings.data ?? []).map((s) => (s as { id: string }).id);
+  const missing = siblingIds.filter((id) => !ids.includes(id));
+  if (missing.length) {
+    throw new Error(
+      `order must list every one of this ${parentColumn}'s ${table} — ${missing.length} missing: ${missing.join(", ")}`,
+    );
+  }
+
+  for (let i = 0; i < ids.length; i++) {
+    const { error } = await ctx.db
+      .from(table as never)
+      .update({ sort_order: i } as never)
+      .eq("id", ids[i])
+      .eq("user_id", ctx.userId);
+    if (error) throw new Error(error.message);
+  }
+  return { reordered: table, [parentColumn]: parentId, count: ids.length };
 }
 
 async function addJoin(

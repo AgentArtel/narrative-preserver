@@ -167,7 +167,13 @@ export function DependencyInspector({
           .select("id, owner_id, provider, capability, external_id")
           .eq("status", "active")
           .in("owner_id", ownerIds),
-        supabase.from("canon_records").select("id, subject_id, aspect").eq("project_id", projectId),
+        // Active only, in step with generation-package-core: the graph must not
+        // claim a shot depends on canon the compiled package no longer carries.
+        supabase
+          .from("canon_records")
+          .select("id, subject_id, aspect")
+          .eq("project_id", projectId)
+          .is("retired_at", null),
         // Every pair, not just the newest — KeyframePairs.tsx lints them all,
         // and reporting on one of several is how two surfaces start disagreeing.
         supabase.from("keyframe_pairs").select("id, form").eq("shot_id", shotId),

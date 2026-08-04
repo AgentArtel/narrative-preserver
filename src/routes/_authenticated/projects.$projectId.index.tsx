@@ -98,7 +98,8 @@ function ProjectHome() {
           supabase
             .from("canon_records")
             .select("id", { count: "exact", head: true })
-            .eq("project_id", projectId),
+            .eq("project_id", projectId)
+            .is("retired_at", null),
         ]);
       const shotIds = (shots ?? []).map((s) => s.id);
       const { data: generations } = shotIds.length

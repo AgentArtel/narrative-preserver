@@ -18,7 +18,6 @@ import type { DB } from "@/lib/generation-package-core";
 import { uploadImage } from "@/lib/upload";
 import { importGenerationResults } from "@/lib/import-results";
 
-
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Check, Network, Package, Sparkles, Upload, Workflow } from "lucide-react";
@@ -87,7 +86,11 @@ function ShotDetail() {
           .select("*")
           .eq("shot_id", shotId)
           .order("created_at", { ascending: false }),
-        supabase.from("canon_records").select("*").eq("project_id", projectId),
+        supabase
+          .from("canon_records")
+          .select("*")
+          .eq("project_id", projectId)
+          .is("retired_at", null),
       ]);
       return {
         shot,
@@ -139,8 +142,6 @@ function ShotDetail() {
   const purposesFor = (frameId: string) =>
     (approvals ?? []).filter((a) => a.frame_id === frameId).map((a) => a.purpose);
 
-
-
   async function approveFrame(frameId: string) {
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -155,7 +156,6 @@ function ShotDetail() {
     qc.invalidateQueries();
     toast.success("Frame approved for default — this is now a production decision");
   }
-
 
   async function importForGeneration(generationId: string, files: FileList | null) {
     if (!files?.length) return;
@@ -288,7 +288,6 @@ function ShotDetail() {
 
           <CraftWarnings warnings={shotWarnings} className="mt-4" />
 
-
           <div className="mt-8">
             <SectionLabel>Candidates ({candidates.length})</SectionLabel>
             {compare.length === 2 && (
@@ -349,7 +348,6 @@ function ShotDetail() {
                       </div>
                     )}
                   </div>
-
                 </div>
               ))}
               {candidates.length === 0 && (

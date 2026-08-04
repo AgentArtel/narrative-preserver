@@ -134,7 +134,15 @@ export function PromoteToCanonDialog({
         if (match) {
           const { error } = await supabase
             .from("canon_records")
-            .update({ description, source_frame_id: frameId })
+            // Re-promoting makes the aspect canon again — without clearing the
+            // retirement the write lands on a retired row and never reaches a
+            // package. Same rule as the promote_canon MCP tool.
+            .update({
+              description,
+              source_frame_id: frameId,
+              retired_at: null,
+              retired_reason: null,
+            })
             .eq("id", match.id);
           if (error) throw error;
           updated++;
