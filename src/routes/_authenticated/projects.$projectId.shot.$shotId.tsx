@@ -7,10 +7,17 @@ import { Chip, SectionLabel, StatusBadge, CanonMarker } from "@/components/sf/pr
 import { GenerationPackageDialog } from "@/components/sf/GenerationPackageDialog";
 import { PromoteToCanonDialog } from "@/components/sf/PromoteToCanonDialog";
 import { KeyframePairs } from "@/components/sf/KeyframePairs";
+import { CraftWarnings } from "@/components/sf/CraftWarnings";
+import { FrameApprovals } from "@/components/sf/FrameApprovals";
 import { useVocabularies } from "@/hooks/useVocabularies";
 import type { Camera } from "@/lib/storyforge";
+import { asLandmarks } from "@/lib/storyforge";
+import { lintShotLine } from "@/lib/validation";
+import { approveFrameFor, DEFAULT_PURPOSE } from "@/lib/approvals-core";
+import type { DB } from "@/lib/generation-package-core";
 import { uploadImage } from "@/lib/upload";
 import { importGenerationResults } from "@/lib/import-results";
+
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -54,7 +61,7 @@ function ShotDetail() {
       const { data: shot, error } = await supabase
         .from("shots")
         .select(
-          "*, scenes(id, title, sequences(title)), frames(*), locations(name), shot_characters(character_id, characters(name)), shot_elements(element_id, elements(name))",
+          "*, scenes(id, title, sequences(title)), frames(*), locations(name, landmarks, blocking_anchor), shot_characters(character_id, characters(name)), shot_elements(element_id, elements(name))",
         )
         .eq("id", shotId)
         .single();
@@ -91,16 +98,56 @@ function ShotDetail() {
   const { data: vocab } = useVocabularies(projectId);
   const movement = ((shot?.camera ?? {}) as Camera).movement;
 
+  // The same rules the MCP tools return, shown inline as amber hints.
+  const shotWarnings = shot
+    ? lintShotLine({
+        line: shot.description,
+        movement,
+        moves: vocab?.moves ?? [],
+        landmarks: asLandmarks(shot.locations?.landmarks),
+        blockingAnchor: shot.locations?.blocking_anchor ?? null,
+        locationName: shot.locations?.name ?? null,
+      })
+    : [];
+
+  // Scoped approvals, so a hold for one purpose is visible at a glance.
+  const { data: approvals } = useQuery({
+    queryKey: ["shot-frame-approvals", shotId, frames.map((f) => f.id).join(",")],
+    enabled: frames.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("frame_approvals")
+        .select("frame_id, purpose")
+        .in(
+          "frame_id",
+          frames.map((f) => f.id),
+        );
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const purposeLabel = (slug: string) =>
+    (vocab?.purposes ?? []).find((p) => p.slug === slug)?.label ?? slug;
+  const purposesFor = (frameId: string) =>
+    (approvals ?? []).filter((a) => a.frame_id === frameId).map((a) => a.purpose);
+
+
+
   async function approveFrame(frameId: string) {
-    await supabase.from("frames").update({ is_approved: false }).eq("shot_id", shotId);
-    const { error } = await supabase.from("frames").update({ is_approved: true }).eq("id", frameId);
-    if (error) return toast.error(error.message);
-    if (shot?.status !== "final") {
-      await supabase.from("shots").update({ status: "approved" }).eq("id", shotId);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      await approveFrameFor(supabase as unknown as DB, {
+        userId: u.user!.id,
+        frameId,
+        purpose: DEFAULT_PURPOSE,
+      });
+    } catch (e) {
+      return toast.error(e instanceof Error ? e.message : "Approval failed");
     }
     qc.invalidateQueries();
-    toast.success("Frame approved — this is now a production decision");
+    toast.success("Frame approved for default — this is now a production decision");
   }
+
 
   async function importForGeneration(generationId: string, files: FileList | null) {
     if (!files?.length) return;
@@ -212,13 +259,19 @@ function ShotDetail() {
             )}
           </div>
           {approved && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <CanonMarker count={canonForFrame(approved.id)} />
-              <Button size="sm" variant="outline" onClick={() => setCanonFrame(approved.id)}>
-                <Sparkles className="size-4" /> Promote to canon
-              </Button>
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <CanonMarker count={canonForFrame(approved.id)} />
+                <Button size="sm" variant="outline" onClick={() => setCanonFrame(approved.id)}>
+                  <Sparkles className="size-4" /> Promote to canon
+                </Button>
+              </div>
+              <FrameApprovals frame={approved} purposes={vocab?.purposes ?? []} />
             </div>
           )}
+
+          <CraftWarnings warnings={shotWarnings} className="mt-4" />
+
 
           <div className="mt-8">
             <SectionLabel>Candidates ({candidates.length})</SectionLabel>
@@ -257,17 +310,30 @@ function ShotDetail() {
                     className="aspect-video w-full cursor-pointer object-cover"
                     onClick={() => toggleCompare(f.id)}
                   />
-                  <div className="flex items-center justify-between gap-2 p-2">
-                    <span className="label-caps">{f.kind}</span>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => toggleCompare(f.id)}>
-                        Compare
-                      </Button>
-                      <Button size="sm" onClick={() => approveFrame(f.id)}>
-                        Approve
-                      </Button>
+                  <div className="space-y-2 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="label-caps">{f.kind}</span>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => toggleCompare(f.id)}>
+                          Compare
+                        </Button>
+                        <Button size="sm" onClick={() => approveFrame(f.id)}>
+                          Approve
+                        </Button>
+                      </div>
                     </div>
+                    {(purposesFor(f.id).length > 0 || f.derived_from_frame_id) && (
+                      <div className="flex flex-wrap gap-1">
+                        {purposesFor(f.id).map((p) => (
+                          <Chip key={p} tone="accent">
+                            {purposeLabel(p)}
+                          </Chip>
+                        ))}
+                        {f.derived_from_frame_id && <Chip>edit of a master</Chip>}
+                      </div>
+                    )}
                   </div>
+
                 </div>
               ))}
               {candidates.length === 0 && (

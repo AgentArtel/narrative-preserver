@@ -563,7 +563,7 @@
       {
         "name": "create_shot",
         "title": "create_shot",
-        "description": "Create a shot in a scene, appended at the end with status 'idea'. camera.movement should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
+        "description": "Create a shot in a scene, appended at the end with status 'idea'. The camera move is read from `camera.movement` and should name a move from the project's camera-move vocabulary; an undeclared move renders as a slow push-in. risk_tail is the pre-render failure prediction and never enters a generation package.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -644,7 +644,7 @@
       {
         "name": "update_shot",
         "title": "update_shot",
-        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. Status 'held_still' is a production decision — the shot ships as a still.",
+        "description": "Patch a shot. Allowed keys: description, dialogue, duration_seconds, camera, location_id, location_state, look_id, status, beat_id, shot_number, risk_tail. The camera move is read from `camera.movement` — an undeclared move renders as a slow push-in. Status 'held_still' is a production decision — the shot ships as a still.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -728,7 +728,7 @@
       {
         "name": "log_generation",
         "title": "log_generation",
-        "description": "Record a generation handoff for a shot.",
+        "description": "Record a generation handoff for a shot. tier defaults to 'previs' so the expensive tier is always a deliberate act. Returns the preflight warnings for that shot — reported, never gating.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -768,6 +768,13 @@
             },
             "cost_credits": {
               "type": "number"
+            },
+            "tier": {
+              "type": "string",
+              "enum": [
+                "previs",
+                "finish"
+              ]
             }
           },
           "required": [
@@ -865,7 +872,53 @@
       {
         "name": "approve_frame",
         "title": "approve_frame",
-        "description": "Approve a frame: unapproves sibling frames on the shot and moves the shot to 'approved' unless it is already 'final'.",
+        "description": "Approve a frame for a purpose. Approval is scoped, not global: the same frame can be a pass as an armour design and a hold as a face reference. Omitting purpose approves for 'default', which keeps the single approved frame per shot and moves the shot to 'approved' unless it is already 'final'.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "frame_id": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "revoke_frame_approval",
+        "title": "revoke_frame_approval",
+        "description": "Withdraw a frame's approval for one purpose. Other purposes are untouched — a hold as a face reference does not undo a pass as an armour design.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "frame_id": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame_id",
+            "purpose"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_frame_approvals",
+        "title": "list_frame_approvals",
+        "description": "List every purpose a frame is approved for, with who approved it and when.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -877,6 +930,157 @@
           "required": [
             "frame_id"
           ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "record_frame_edit",
+        "title": "record_frame_edit",
+        "description": "Register a new frame as an edit derived from an existing master. Editing a frame that is itself already an edit is refused: every edit pass silently re-renders the whole image, so damage is cumulative and invisible per step — composite the change back onto the original master instead of chaining.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "source_frame_id": {
+              "type": "string"
+            },
+            "image_url": {
+              "type": "string"
+            },
+            "is_composite": {
+              "type": "boolean"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source_frame_id",
+            "image_url"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "lint_shot_line",
+        "title": "lint_shot_line",
+        "description": "Lint a shot line against the shot-line grammar: camera move declared in the first three words and present in the project's camera vocabulary, at least one named landmark from the location referenced, and slow motion fused to a framing rather than standing bare. Warns; never refuses a save.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "shot_id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "location_id": {
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_location_ready",
+        "title": "check_location_ready",
+        "description": "Report which of the five location locks are unset and whether a reverse has been verified, in production terms: what this plate is usable for and what it is not. A plate with no verified reverse can still serve a single-angle shot; it cannot serve as a diagnostic baseline.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "location_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "location_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "check_sheet",
+        "title": "check_sheet",
+        "description": "Walk the character-sheet checklist against a frame and record the verdict. It cannot inspect pixels: pass/fail/na per item, with the reason for each item shipped beside it. Calling it with no verdicts returns the checklist and any prior verdict for that frame.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "frame_id": {
+              "type": "string"
+            },
+            "character_id": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "verdicts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": {
+                    "type": "string"
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "pass",
+                      "fail",
+                      "na"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "item",
+                  "verdict"
+                ]
+              }
+            }
+          },
+          "required": [
+            "frame_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "preflight_generation",
+        "title": "preflight_generation",
+        "description": "Run before a roll, over a project or a set of shots: unresolved Elements with no active provider identity, shots carrying three or more risk classes (three or more means it is really a sequence — split it), locations with unset locks or an unverified reverse, and the credit cost at the chosen tier with the previs equivalent beside it. It reports; it does not gate the roll.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string"
+            },
+            "shot_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tier": {
+              "type": "string",
+              "enum": [
+                "previs",
+                "finish"
+              ]
+            },
+            "rate_slug": {
+              "type": "string"
+            },
+            "seconds": {
+              "type": "number"
+            }
+          }
         },
         "outputSchema": null
       },

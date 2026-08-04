@@ -20,6 +20,7 @@ import { ChevronRight, ListTree, Lock as LockIcon, Plus } from "lucide-react";
 import { ProjectLocksDialog } from "@/components/sf/ProjectLocksDialog";
 import { VocabularyDialog } from "@/components/sf/VocabularyDialog";
 import { LOCK_FIELDS } from "@/lib/storyforge";
+import { spendRollup } from "@/lib/validation";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   head: () => ({
@@ -108,6 +109,13 @@ function ProjectHome() {
             .order("created_at", { ascending: false })
             .limit(6)
         : { data: [] };
+      // Every generation, tier only — money is a first-class fact on this page.
+      const { data: spendRows } = shotIds.length
+        ? await supabase
+            .from("generations")
+            .select("tier, cost_credits, created_at, shots(status, updated_at)")
+            .in("shot_id", shotIds)
+        : { data: [] };
       return {
         project,
         sequences: sequences ?? [],
@@ -121,11 +129,21 @@ function ProjectHome() {
           canon: canon ?? 0,
         },
         generations: generations ?? [],
+        spend: spendRollup(
+          (spendRows ?? []).map((g) => ({
+            tier: g.tier ?? null,
+            cost_credits: g.cost_credits ?? null,
+            created_at: g.created_at,
+            shot_status: g.shots?.status ?? null,
+            shot_updated_at: g.shots?.updated_at ?? null,
+          })),
+        ),
       };
     },
   });
 
   const pending = (data?.shots ?? []).filter((s) => s.status === "candidates");
+
   const locksSet = LOCK_FIELDS.some(
     (f) => !!(data?.project as Record<string, unknown> | undefined)?.[f.key],
   );
@@ -238,6 +256,21 @@ function ProjectHome() {
         <Stat label="Elements" value={data?.counts.elements ?? 0} />
         <Stat label="Canon" value={data?.counts.canon ?? 0} />
       </div>
+
+      {/* Spend: previs cheaply, finish only survivors. */}
+      <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+        <SectionLabel>Spend</SectionLabel>
+        <div className="mt-2 grid gap-4 sm:grid-cols-3">
+          <Stat label="Total credits" value={data?.spend.total_credits ?? 0} />
+          <Stat label="Finish tier" value={data?.spend.finish_credits ?? 0} />
+          <Stat
+            label="Finish credits on changed shots"
+            value={`${data?.spend.wasted_finish_credits ?? 0} (${data?.spend.wasted_pct ?? 0}%)`}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{data?.spend.sentence}</p>
+      </div>
+
 
       <ProjectLocksDialog
         projectId={projectId}

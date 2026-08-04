@@ -41,6 +41,53 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_purposes: {
+        Row: {
+          created_at: string
+          description: string | null
+          hidden: boolean
+          id: string
+          label: string
+          project_id: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          label: string
+          project_id?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          label?: string
+          project_id?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_purposes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_references: {
         Row: {
           created_at: string
@@ -297,12 +344,55 @@ export type Database = {
           },
         ]
       }
+      frame_approvals: {
+        Row: {
+          approved_at: string
+          approved_by: string | null
+          created_at: string
+          frame_id: string
+          id: string
+          note: string | null
+          purpose: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          frame_id: string
+          id?: string
+          note?: string | null
+          purpose?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          frame_id?: string
+          id?: string
+          note?: string | null
+          purpose?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "frame_approvals_frame_id_fkey"
+            columns: ["frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       frames: {
         Row: {
           created_at: string
+          derived_from_frame_id: string | null
           id: string
           image_url: string
           is_approved: boolean
+          is_composite: boolean
           kind: Database["public"]["Enums"]["frame_kind"]
           notes: string | null
           shot_id: string
@@ -310,9 +400,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          derived_from_frame_id?: string | null
           id?: string
           image_url: string
           is_approved?: boolean
+          is_composite?: boolean
           kind?: Database["public"]["Enums"]["frame_kind"]
           notes?: string | null
           shot_id: string
@@ -320,15 +412,24 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          derived_from_frame_id?: string | null
           id?: string
           image_url?: string
           is_approved?: boolean
+          is_composite?: boolean
           kind?: Database["public"]["Enums"]["frame_kind"]
           notes?: string | null
           shot_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "frames_derived_from_frame_id_fkey"
+            columns: ["derived_from_frame_id"]
+            isOneToOne: false
+            referencedRelation: "frames"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "frames_shot_id_fkey"
             columns: ["shot_id"]
@@ -351,6 +452,7 @@ export type Database = {
           settings: Json
           shot_id: string
           status: Database["public"]["Enums"]["generation_status"]
+          tier: string
           tool: string | null
           user_id: string
         }
@@ -366,6 +468,7 @@ export type Database = {
           settings?: Json
           shot_id: string
           status?: Database["public"]["Enums"]["generation_status"]
+          tier?: string
           tool?: string | null
           user_id: string
         }
@@ -381,6 +484,7 @@ export type Database = {
           settings?: Json
           shot_id?: string
           status?: Database["public"]["Enums"]["generation_status"]
+          tier?: string
           tool?: string | null
           user_id?: string
         }
@@ -581,6 +685,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "looks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      model_rates: {
+        Row: {
+          created_at: string
+          credits_per_second: number
+          description: string | null
+          hidden: boolean
+          id: string
+          label: string
+          model: string
+          project_id: string | null
+          provider: string
+          resolution: string
+          slug: string
+          sort_order: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits_per_second: number
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          label: string
+          model: string
+          project_id?: string | null
+          provider?: string
+          resolution: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits_per_second?: number
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          label?: string
+          model?: string
+          project_id?: string | null
+          provider?: string
+          resolution?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_rates_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -835,6 +998,110 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sheet_checklist_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          hidden: boolean
+          id: string
+          label: string
+          project_id: string | null
+          reason: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          label: string
+          project_id?: string | null
+          reason?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          hidden?: boolean
+          id?: string
+          label?: string
+          project_id?: string | null
+          reason?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheet_checklist_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sheet_checks: {
+        Row: {
+          character_id: string | null
+          checked_at: string
+          checked_by: string | null
+          created_at: string
+          frame_id: string
+          id: string
+          note: string | null
+          updated_at: string
+          user_id: string
+          verdicts: Json
+        }
+        Insert: {
+          character_id?: string | null
+          checked_at?: string
+          checked_by?: string | null
+          created_at?: string
+          frame_id: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+          user_id: string
+          verdicts?: Json
+        }
+        Update: {
+          character_id?: string | null
+          checked_at?: string
+          checked_by?: string | null
+          created_at?: string
+          frame_id?: string
+          id?: string
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+          verdicts?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheet_checks_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheet_checks_frame_id_fkey"
+            columns: ["frame_id"]
+            isOneToOne: true
+            referencedRelation: "frames"
             referencedColumns: ["id"]
           },
         ]
