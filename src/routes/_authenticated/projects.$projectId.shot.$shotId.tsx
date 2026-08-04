@@ -310,17 +310,30 @@ function ShotDetail() {
                     className="aspect-video w-full cursor-pointer object-cover"
                     onClick={() => toggleCompare(f.id)}
                   />
-                  <div className="flex items-center justify-between gap-2 p-2">
-                    <span className="label-caps">{f.kind}</span>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => toggleCompare(f.id)}>
-                        Compare
-                      </Button>
-                      <Button size="sm" onClick={() => approveFrame(f.id)}>
-                        Approve
-                      </Button>
+                  <div className="space-y-2 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="label-caps">{f.kind}</span>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => toggleCompare(f.id)}>
+                          Compare
+                        </Button>
+                        <Button size="sm" onClick={() => approveFrame(f.id)}>
+                          Approve
+                        </Button>
+                      </div>
                     </div>
+                    {(purposesFor(f.id).length > 0 || f.derived_from_frame_id) && (
+                      <div className="flex flex-wrap gap-1">
+                        {purposesFor(f.id).map((p) => (
+                          <Chip key={p} tone="accent">
+                            {purposeLabel(p)}
+                          </Chip>
+                        ))}
+                        {f.derived_from_frame_id && <Chip>edit of a master</Chip>}
+                      </div>
+                    )}
                   </div>
+
                 </div>
               ))}
               {candidates.length === 0 && (
