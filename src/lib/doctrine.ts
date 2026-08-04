@@ -237,9 +237,14 @@ card at the time of writing:
 | std 4K | 22.0 | **330** |
 
 That is a 22× spread between the cheapest previs and 4K finish. The number that actually
-changes behaviour is not total spend but **credits spent at finish tier on shots that
-later changed** — a finish render of a shot you then re-cut is the whole cost with none
-of the benefit.
+changes behaviour is not total spend but **finish credits that bought nothing**: a finish
+render that was rejected, one that a later finish render on the same shot replaced, or one
+on a shot now in revision or held as a still. Each of those is the whole cost with none of
+the benefit.
+
+Note what that figure deliberately does *not* count. A shot that was finished and then
+approved is not waste, however much it was edited on the way — an earlier version counted
+any post-render edit as waste and therefore flagged every successful shot.
 
 Generations default to **previs** tier so that spending the expensive one is always a
 deliberate act. \`preflight_generation\` quotes the cost before it is spent and quotes the

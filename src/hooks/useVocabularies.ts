@@ -14,6 +14,10 @@ export function useVocabularies(projectId: string) {
   return useQuery({
     queryKey: ["vocabularies", projectId],
     queryFn: async () => {
+      // No user_id predicate needed here: the browser client runs under the
+      // caller's JWT, so RLS applies and already restricts "global" to rows
+      // owned by nobody. The MCP path has to spell it out (craft.ts vocabScope)
+      // because it runs service-role and RLS is never evaluated there.
       const scope = `project_id.is.null,project_id.eq.${projectId}`;
       const [moves, classes, sheet, rates, purposes] = await Promise.all([
         supabase.from("camera_moves").select("*").or(scope),
@@ -39,4 +43,3 @@ export function useVocabularies(projectId: string) {
     },
   });
 }
-

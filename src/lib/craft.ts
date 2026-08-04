@@ -40,6 +40,25 @@ export function mergeVocab<T extends VocabRow>(rows: T[]): T[] {
     .sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label));
 }
 
+/**
+ * The vocabulary scope rule, applied by hand.
+ *
+ * These tables are read on the deprecated API-key route, where `ctx.db` is the
+ * service-role client and RLS is never evaluated — so the policies that make
+ * "global" mean `user_id IS NULL AND project_id IS NULL` do not run. Filtering
+ * on `project_id` alone would serve another account's row as a default: on
+ * `project_id IS NULL` if they left it null, and on `project_id.eq.<mine>`
+ * because nothing stops a write naming someone else's project id.
+ *
+ * mergeVocab keys by slug, so such a row does not merely appear — it displaces
+ * the real seed and the rate card starts quoting someone else's credits.
+ */
+export function vocabScope(userId: string, projectId: string | null): string {
+  const globals = "and(user_id.is.null,project_id.is.null)";
+  if (!projectId) return globals;
+  return `${globals},and(user_id.eq.${userId},project_id.eq.${projectId})`;
+}
+
 export function normalizeToken(value: string): string {
   return value
     .trim()
@@ -69,7 +88,9 @@ export function cameraMoveWarnings(
   const warnings: string[] = [];
   const tokens = parseMovementTokens(movement);
   if (!tokens.length) {
-    warnings.push(`No camera move declared — expected \`camera.movement\`. ${UNDECLARED_MOVE_HINT}`);
+    warnings.push(
+      `No camera move declared — expected \`camera.movement\`. ${UNDECLARED_MOVE_HINT}`,
+    );
     return warnings;
   }
   const allowed = moves.map((m) => m.label).join(", ");
