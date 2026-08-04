@@ -953,7 +953,8 @@ export const TOOLS: Tool[] = [
   /* -------------------------------------------------- generation flow */
   {
     name: "log_generation",
-    description: "Record a generation handoff for a shot.",
+    description:
+      "Record a generation handoff for a shot. tier defaults to 'previs' so the expensive tier is always a deliberate act. Returns the preflight warnings for that shot — reported, never gating.",
     inputSchema: schema(
       {
         shot_id: S.string,
@@ -965,6 +966,7 @@ export const TOOLS: Tool[] = [
         settings: S.object,
         status: { type: "string", enum: GENERATION_STATUSES },
         cost_credits: S.number,
+        tier: { type: "string", enum: [...GENERATION_TIERS] },
       },
       ["shot_id"],
     ),
@@ -972,6 +974,10 @@ export const TOOLS: Tool[] = [
       const shotId = str(a, "shot_id");
       await own(ctx, "shots", shotId);
       const status = optStr(a, "status");
+      const tierRaw = optStr(a, "tier");
+      const tier = tierRaw
+        ? oneOf(tierRaw, [...GENERATION_TIERS] as GenerationTier[], "generation tier")
+        : "previs";
       const row = await insertRow(
         ctx,
         "generations",
@@ -985,11 +991,19 @@ export const TOOLS: Tool[] = [
           settings: optObj(a, "settings") ?? {},
           status: status ? oneOf(status, GENERATION_STATUSES, "generation status") : "handed_off",
           cost_credits: optNum(a, "cost_credits"),
+          tier,
         },
         "id",
       );
-      return { generation_id: row.id };
+      const preflight = await runPreflight(ctx.db, ctx.userId, { shotIds: [shotId], tier });
+      return {
+        generation_id: row.id,
+        tier,
+        warnings: (preflight.shots[0]?.warnings ?? []).map(warningText),
+        preflight,
+      };
     },
+
   },
   {
     name: "add_frames",

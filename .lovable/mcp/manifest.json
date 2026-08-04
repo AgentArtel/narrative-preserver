@@ -728,7 +728,7 @@
       {
         "name": "log_generation",
         "title": "log_generation",
-        "description": "Record a generation handoff for a shot.",
+        "description": "Record a generation handoff for a shot. tier defaults to 'previs' so the expensive tier is always a deliberate act. Returns the preflight warnings for that shot — reported, never gating.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
@@ -768,6 +768,13 @@
             },
             "cost_credits": {
               "type": "number"
+            },
+            "tier": {
+              "type": "string",
+              "enum": [
+                "previs",
+                "finish"
+              ]
             }
           },
           "required": [
