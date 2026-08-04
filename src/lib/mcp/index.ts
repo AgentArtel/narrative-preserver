@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { TOOLS, type Ctx } from "@/lib/mcp/storyforge-mcp.server";
 import { supabaseForUser } from "@/lib/mcp/supabase";
+import { doctrinePreamble } from "@/lib/doctrine";
 
 /* ------------------------------------------------------------------
  * The tool catalogue, handlers and every ownership check stay exactly as
@@ -94,14 +95,16 @@ const tools = TOOLS.map((tool) =>
 
 // The OAuth issuer must be the direct Supabase host: the published runtime
 // SUPABASE_URL is a proxy and would fail RFC 8414 issuer matching.
-const projectRef = import.meta.env['VITE_SUPABASE_PROJECT_ID'] ?? "project-ref-unset";
+const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
 
 export default defineMcp({
   name: "storyforge-canvas",
   title: "StoryForge Canvas",
   version: "1.0.0",
-  instructions:
-    "Read and write StoryForge production state: projects, sequences, scenes, beats, shots, cast, locations, elements, looks, references, canon and generation history. Start with get_project_overview to orient, and get_context_package to compile a shot's full generation context.",
+  // Generated from the same doctrine source get_house_rules serves, so the
+  // headline every client receives at connect and the full text a session can
+  // ask for cannot drift apart.
+  instructions: doctrinePreamble(),
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

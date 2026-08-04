@@ -25,7 +25,17 @@ import {
   type CameraMoveRow,
   type KeyframeForm,
   type RiskClassRow,
+  type VocabRow,
 } from "@/lib/craft";
+import {
+  DOCTRINE_IDS,
+  DOCTRINE_UPDATED,
+  GATE_REQUIREMENT,
+  doctrineSections,
+  renderHouseRules,
+  type VocabQuote,
+  type VocabularyKind,
+} from "@/lib/doctrine";
 import {
   GENERATION_TIERS,
   SHEET_VERDICTS,
@@ -33,11 +43,22 @@ import {
   checkLocationReady,
   editLineageBlock,
   lintShotLine,
+  riskSplitWarning,
   sheetSummary,
+  spendRollup,
   warningText,
   type GenerationTier,
+  type ModelRateRow,
   type SheetChecklistRow,
 } from "@/lib/validation";
+
+const VOCABULARY_KINDS = [
+  "camera_moves",
+  "risk_classes",
+  "sheet_checklist",
+  "model_rates",
+  "approval_purposes",
+] as const satisfies readonly VocabularyKind[];
 import { runPreflight } from "@/lib/preflight-core";
 import { approveFrameFor, revokeFrameApproval, DEFAULT_PURPOSE } from "@/lib/approvals-core";
 
@@ -344,7 +365,9 @@ export const TOOLS: Tool[] = [
           ctx.db
             .from("sequences")
             .select(
-              "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order, risk_tail))",
+              // camera and location_id are needed to lint the shot lines below;
+              // everything else here is what callers already depend on.
+              "id, title, sort_order, scenes(id, title, brief, status, sort_order, shots(id, shot_number, status, description, sort_order, risk_tail, camera, location_id))",
             )
             .eq("project_id", projectId)
             .eq("user_id", ctx.userId)
@@ -384,19 +407,29 @@ export const TOOLS: Tool[] = [
             .or(`project_id.is.null,project_id.eq.${projectId}`),
         ],
       );
+      const moveRows = mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]);
+      const locationRows = (locations.data ?? []) as Record<string, unknown>[];
+
       return {
         project,
         sequences: seqs.data ?? [],
         characters: characters.data ?? [],
-        locations: (locations.data ?? []).map((l) => ({
+        locations: locationRows.map((l) => ({
           ...l,
           lock_state: locationLockState(l as never),
         })),
         elements: elements.data ?? [],
         looks: looks.data ?? [],
-        camera_moves: mergeVocab((moves.data ?? []) as unknown as CameraMoveRow[]),
+        camera_moves: moveRows,
         risk_classes: mergeVocab((risks.data ?? []) as unknown as RiskClassRow[]),
         canon_count: canon.count ?? 0,
+        pipeline: await pipelinePosition(ctx, projectId, {
+          project: project as Record<string, unknown>,
+          sequences: (seqs.data ?? []) as unknown as SeqTree[],
+          characters: (characters.data ?? []) as { id: string; name: string }[],
+          locations: locationRows,
+          moves: moveRows,
+        }),
       };
     },
   },
@@ -839,12 +872,16 @@ export const TOOLS: Tool[] = [
           items: {
             type: "object",
             properties: {
-              risk_class: S.string,
+              // `class`, not `risk_class`: asRiskTail reads raw.class and the
+              // editor writes it. The transport builds this shape with z.object,
+              // which strips unknown keys, so the old name meant every risk tail
+              // written over MCP silently lost its class.
+              class: S.string,
               prediction: S.string,
               fallback: S.string,
               occurred: { type: "string", enum: ["yes", "no"] },
             },
-            required: ["risk_class"],
+            required: ["class"],
             additionalProperties: false,
           },
         },
@@ -1436,7 +1473,370 @@ export const TOOLS: Tool[] = [
       };
     },
   },
+  {
+    name: "get_vocabularies",
+    description:
+      "The project's five vocabularies as data: camera moves (with is_time_move and implies_motion), risk classes, the character-sheet checklist, the model rate card (credits per second) and approval purposes. Per-project rows override the global defaults of the same slug; each entry is marked which it is. These are rows, not constants — a fourteenth camera move or a vendor price change is an edit, not a deploy.",
+    inputSchema: schema(
+      {
+        project_id: S.string,
+        kind: { type: "string", enum: VOCABULARY_KINDS },
+      },
+      ["project_id"],
+    ),
+    handler: async (ctx, a) => {
+      const projectId = str(a, "project_id");
+      await own(ctx, "projects", projectId);
+      const kind = optStr(a, "kind") as VocabularyKind | null;
+      const kinds = kind ? [oneOf(kind, VOCABULARY_KINDS, "vocabulary kind")] : VOCABULARY_KINDS;
+      const { rows, unreadable } = await fetchVocabularies(ctx, projectId, kinds);
+      return {
+        project_id: projectId,
+        ...Object.fromEntries(
+          kinds
+            .filter((k) => rows[k])
+            .map((k) => [
+              k,
+              (rows[k] ?? []).map((r) => ({
+                ...r,
+                source: r.project_id ? "project override" : "default",
+              })),
+            ]),
+        ),
+        // Absent from the payload above rather than reported as an empty list.
+        unreadable: unreadable.length ? unreadable : undefined,
+      };
+    },
+  },
+  {
+    name: "get_house_rules",
+    description:
+      "The production doctrine in full, as readable markdown: the four-block prompt, camera grammar, shot-line grammar, the five location locks, character sheets, the render-risk tail, edit discipline, scoped approval, cost tiers and the pipeline gates. Each section says whether its content is measured or convention. Pass `section` to narrow, and `project_id` to have the sections that quote a vocabulary quote that project's resolved rows.",
+    inputSchema: schema({
+      section: { type: "array", items: { type: "string" } },
+      project_id: S.string,
+    }),
+    handler: async (ctx, a) => {
+      const requested = Array.isArray(a.section) ? strArray(a, "section") : null;
+      const unknown = (requested ?? []).filter((s) => !DOCTRINE_IDS.includes(s));
+      const sections = doctrineSections(requested);
+      const projectId = optStr(a, "project_id");
+
+      let quotes: VocabQuote[] = [];
+      let unreadable: { kind: VocabularyKind; reason: string }[] = [];
+      if (projectId) {
+        await own(ctx, "projects", projectId);
+        const needed = [
+          ...new Set(sections.map((s) => s.vocabulary).filter(Boolean)),
+        ] as VocabularyKind[];
+        if (needed.length) {
+          const resolved = await fetchVocabularies(ctx, projectId, needed);
+          unreadable = resolved.unreadable;
+          quotes = needed
+            .filter((kind) => resolved.rows[kind])
+            .map((kind) => ({ kind, lines: (resolved.rows[kind] ?? []).map(vocabLine) }));
+        }
+      }
+
+      return {
+        last_updated: DOCTRINE_UPDATED,
+        section_ids: DOCTRINE_IDS,
+        returned: sections.map((s) => s.id),
+        // Naming a section that does not exist should not silently return
+        // everything as though the filter had been honoured.
+        unknown_sections: unknown.length ? unknown : undefined,
+        // Only claim a project's rows were quoted if at least one actually was.
+        vocabularies_quoted_for_project: quotes.length ? projectId : null,
+        vocabularies_unreadable: unreadable.length ? unreadable : undefined,
+        markdown: renderHouseRules(sections, quotes),
+      };
+    },
+  },
 ];
+
+/* ---------------------------------------------------- pipeline position */
+
+type SeqTree = {
+  scenes?: {
+    shots?: {
+      id: string;
+      shot_number: string | null;
+      description: string | null;
+      status: string | null;
+      risk_tail: unknown;
+      camera: unknown;
+      location_id: string | null;
+    }[];
+  }[];
+};
+
+/**
+ * What is unfinished and what to do next. Two extra queries on top of the
+ * overview's eight — everything else is computed from rows already fetched,
+ * because this is the most frequently called tool on the server.
+ *
+ * A check whose underlying phase has not landed is omitted, never reported as
+ * passing: a session's first call must not fail because a table is missing.
+ */
+async function pipelinePosition(
+  ctx: Ctx,
+  projectId: string,
+  d: {
+    project: Record<string, unknown>;
+    sequences: SeqTree[];
+    characters: { id: string; name: string }[];
+    locations: Record<string, unknown>[];
+    moves: CameraMoveRow[];
+  },
+) {
+  const shots = d.sequences.flatMap((s) => s.scenes ?? []).flatMap((s) => s.shots ?? []);
+  const locationById = new Map(d.locations.map((l) => [l.id as string, l]));
+
+  const [sheets, sheetItems, spend] = await Promise.all([
+    ctx.db
+      .from("sheet_checks")
+      .select("character_id, verdicts")
+      .eq("user_id", ctx.userId)
+      .not("character_id", "is", null)
+      .in(
+        "character_id",
+        d.characters.map((c) => c.id),
+      ),
+    // sheetSummary needs the checklist to know what "unanswered" means.
+    ctx.db
+      .from("sheet_checklist_items")
+      .select("*")
+      .or(`project_id.is.null,project_id.eq.${projectId}`),
+    // generations hang off shots, not projects — scope by this project's shot ids.
+    shots.length
+      ? ctx.db
+          .from("generations")
+          .select("tier, cost_credits, created_at, shots(status, updated_at)")
+          .eq("user_id", ctx.userId)
+          .in(
+            "shot_id",
+            shots.map((s) => s.id),
+          )
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  /* locations: a plate is not locked until the reverse is verified */
+  const locationsNeedingReverse = d.locations
+    .filter((l) => !l.reverse_verified_at)
+    .map((l) => ({ id: l.id as string, name: l.name as string }));
+  const locationsNeedingMotionTest = d.locations
+    .filter((l) => !l.motion_test_passed_at)
+    .map((l) => ({ id: l.id as string, name: l.name as string }));
+
+  /* characters with no sheet that passed its checklist. sheetSummary owns what
+     "passed" means — an all-"na" or half-answered sheet is not a pass, and
+     re-deciding that here would contradict check_sheet on the same row. */
+  let charactersWithoutSheet: { id: string; name: string }[] | undefined;
+  if (!sheets.error && !sheetItems.error) {
+    const items = mergeVocab(
+      (sheetItems.data ?? []) as unknown as SheetChecklistRow[],
+    ) as SheetChecklistRow[];
+    const passed = new Set(
+      (sheets.data ?? [])
+        .filter(
+          (r) => sheetSummary(items, asSheetVerdicts((r as { verdicts: unknown }).verdicts)).passes,
+        )
+        .map((r) => (r as { character_id: string }).character_id),
+    );
+    charactersWithoutSheet = d.characters.filter((c) => !passed.has(c.id));
+  }
+
+  /* risk: no agreed fallback, or it fired and no fallback was written down */
+  const shotsWithUnmitigatedRisk: { id: string; shot_number: string | null; why: string[] }[] = [];
+  const shotsToSplit: { id: string; shot_number: string | null; warning: string }[] = [];
+  for (const s of shots) {
+    const entries = asRiskTail(s.risk_tail);
+    if (!entries.length) continue;
+
+    const why: string[] = [];
+    const noFallback = entries.filter((e) => !e.fallback?.trim());
+    if (noFallback.length) {
+      why.push(
+        `${noFallback.length} risk ${noFallback.length === 1 ? "entry has" : "entries have"} no agreed fallback`,
+      );
+    }
+    const firedUnhandled = entries.filter((e) => e.occurred === "yes" && !e.fallback?.trim());
+    if (firedUnhandled.length) {
+      why.push(
+        `${firedUnhandled.length} risk ${firedUnhandled.length === 1 ? "entry" : "entries"} marked occurred with no fallback recorded`,
+      );
+    }
+    if (why.length) shotsWithUnmitigatedRisk.push({ id: s.id, shot_number: s.shot_number, why });
+
+    // riskSplitWarning owns the three-or-more rule, including the .filter(Boolean)
+    // that stops a blank class from counting as a class.
+    const split = riskSplitWarning(entries);
+    if (split) shotsToSplit.push({ id: s.id, shot_number: s.shot_number, warning: split.message });
+  }
+
+  /* shot lines failing the Phase 3 lint. not_verified is kept separately rather
+     than dropped: "the check could not run" is not "the check passed". A shot
+     whose location belongs to another project has no landmarks to check against,
+     so it is unverified too — not clean. */
+  type LintRow = { id: string; shot_number: string | null; codes: string[] };
+  const failingLint: LintRow[] = [];
+  const lintNotVerified: LintRow[] = [];
+  for (const s of shots) {
+    const loc = s.location_id ? locationById.get(s.location_id) : undefined;
+    const out = lintShotLine({
+      line: s.description,
+      movement: ((s.camera ?? {}) as { movement?: string }).movement,
+      moves: d.moves,
+      landmarks: asLandmarks(loc?.landmarks),
+      blockingAnchor: (loc?.blocking_anchor as string | null) ?? null,
+      locationName: (loc?.name as string | null) ?? null,
+    });
+    const warn = out.filter((x) => x.level === "warning");
+    const unknown = out.filter((x) => x.level === "not_verified").map((x) => x.code);
+    if (s.location_id && !loc) unknown.push("location_outside_project");
+    if (warn.length) {
+      failingLint.push({ id: s.id, shot_number: s.shot_number, codes: warn.map((x) => x.code) });
+    }
+    if (unknown.length) {
+      lintNotVerified.push({ id: s.id, shot_number: s.shot_number, codes: unknown });
+    }
+  }
+
+  const gate = (d.project.gate as string | null) ?? "G0";
+  const spendRows = spend.error
+    ? []
+    : (spend.data ?? []).map((g) => {
+        const row = g as {
+          tier: string | null;
+          cost_credits: number | null;
+          created_at: string;
+          shots?: { status?: string | null; updated_at?: string | null } | null;
+        };
+        return {
+          tier: row.tier,
+          cost_credits: row.cost_credits,
+          created_at: row.created_at,
+          shot_status: row.shots?.status ?? null,
+          shot_updated_at: row.shots?.updated_at ?? null,
+        };
+      });
+
+  /* Next actions. The gate goes FIRST and always — defects at a low gate are
+     inherited by everything above them, so telling a session to fix shot lines
+     while its style lock is unfrozen is advice in the wrong order. Everything
+     after it is only listed when it is actually true. */
+  const next: string[] = [GATE_REQUIREMENT[gate] ?? `Advance past ${gate}.`];
+  if (charactersWithoutSheet?.length) {
+    next.push(
+      `Get a passing character sheet for ${charactersWithoutSheet.length} character(s): ${charactersWithoutSheet.map((c) => c.name).join(", ")}.`,
+    );
+  }
+  if (locationsNeedingReverse.length) {
+    next.push(
+      `Generate and verify a reverse angle for ${locationsNeedingReverse.length} location(s): ${locationsNeedingReverse.map((l) => l.name).join(", ")}. Until then they are single-angle plates, not locks.`,
+    );
+  }
+  if (shotsToSplit.length) {
+    next.push(
+      `Split ${shotsToSplit.length} shot(s) carrying three or more risk classes — that is a sequence, not a shot.`,
+    );
+  }
+  if (shotsWithUnmitigatedRisk.length) {
+    next.push(
+      `Agree a fallback for ${shotsWithUnmitigatedRisk.length} shot(s) with an unmitigated risk.`,
+    );
+  }
+  if (failingLint.length) {
+    next.push(
+      `Fix ${failingLint.length} shot line(s) failing the lint — call lint_shot_line on each for the specific rewrite.`,
+    );
+  }
+
+  return {
+    gate,
+    gate_requires: GATE_REQUIREMENT[gate] ?? null,
+    locations_without_verified_reverse: locationsNeedingReverse,
+    locations_without_motion_test: locationsNeedingMotionTest,
+    // Named for what it measures: a recorded checklist pass, not a frame_approval.
+    characters_without_passing_sheet: charactersWithoutSheet,
+    shots_with_unmitigated_risk: shotsWithUnmitigatedRisk,
+    shots_to_split: shotsToSplit,
+    shots_failing_lint: { count: failingLint.length, shots: failingLint },
+    // Checks that could not run. Never fold these into the pass count.
+    shots_lint_not_verified: { count: lintNotVerified.length, shots: lintNotVerified },
+    spend: spend.error ? undefined : spendRollup(spendRows),
+    // Truncation is reported rather than silent: a dropped action reads as done.
+    next_actions: next.slice(0, 5),
+    next_actions_omitted: Math.max(0, next.length - 5),
+  };
+}
+
+/* ------------------------------------------------------- vocabularies */
+
+const VOCABULARY_TABLES = {
+  camera_moves: "camera_moves",
+  risk_classes: "risk_classes",
+  sheet_checklist: "sheet_checklist_items",
+  model_rates: "model_rates",
+  approval_purposes: "approval_purposes",
+} as const satisfies Record<VocabularyKind, string>;
+
+/** Read access to the Phase 2/3 vocabulary tables — never a second copy of the
+ *  lists. Per-project rows shadow globals of the same slug via mergeVocab. */
+async function fetchVocabularies(
+  ctx: Ctx,
+  projectId: string,
+  kinds: readonly VocabularyKind[],
+): Promise<{
+  rows: Partial<Record<VocabularyKind, VocabRow[]>>;
+  unreadable: { kind: VocabularyKind; reason: string }[];
+}> {
+  const filter = `project_id.is.null,project_id.eq.${projectId}`;
+  const results = await Promise.all(
+    kinds.map((k) => ctx.db.from(VOCABULARY_TABLES[k]).select("*").or(filter)),
+  );
+  const rows: Partial<Record<VocabularyKind, VocabRow[]>> = {};
+  const unreadable: { kind: VocabularyKind; reason: string }[] = [];
+  kinds.forEach((k, i) => {
+    // A failed read must not become an empty list. "This project has no rate
+    // card" and "the rate card could not be read" lead to opposite decisions,
+    // and a session's first call still must not hard-fail on a missing table.
+    if (results[i].error) {
+      unreadable.push({ kind: k, reason: results[i].error?.message ?? "unknown error" });
+      return;
+    }
+    rows[k] = mergeVocab((results[i].data ?? []) as unknown as VocabRow[]);
+  });
+  return { rows, unreadable };
+}
+
+/** One quotable line per row, carrying the fields that change a decision. */
+function vocabLine(r: VocabRow): string {
+  const extras: string[] = [];
+  const row = r as VocabRow & Partial<CameraMoveRow & RiskClassRow & ModelRateRow>;
+  if (row.is_time_move) {
+    // A time move says nothing about the camera, so reporting implies_motion
+    // as "camera stays put" here would overstate what the row actually claims.
+    extras.push("time move — fuse it to a framing move, never bare");
+  } else if (typeof row.implies_motion === "boolean") {
+    // implies_motion means the a/b framings must differ — NOT that the camera
+    // translates. dutch_angle and vertical_tilt carry it without travelling, so
+    // "travels the camera" here would contradict the row's own description.
+    extras.push(row.implies_motion ? "frame changes between a and b" : "locked-off frame");
+  }
+  if (typeof row.credits_per_second === "number") {
+    extras.push(`${row.credits_per_second} credits/sec`);
+    if (row.resolution) extras.push(row.resolution);
+  }
+  const detail = row.description ?? row.guidance ?? null;
+  return [
+    `\`${r.slug}\` — ${r.label}`,
+    extras.length ? `(${extras.join(" · ")})` : "",
+    detail ? `— ${detail}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 async function addJoin(
   ctx: Ctx,
