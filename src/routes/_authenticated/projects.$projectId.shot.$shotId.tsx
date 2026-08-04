@@ -61,7 +61,7 @@ function ShotDetail() {
       const { data: shot, error } = await supabase
         .from("shots")
         .select(
-          "*, scenes(id, title, sequences(title)), frames(*), locations(name), shot_characters(character_id, characters(name)), shot_elements(element_id, elements(name))",
+          "*, scenes(id, title, sequences(title)), frames(*), locations(name, landmarks, blocking_anchor), shot_characters(character_id, characters(name)), shot_elements(element_id, elements(name))",
         )
         .eq("id", shotId)
         .single();
@@ -98,16 +98,33 @@ function ShotDetail() {
   const { data: vocab } = useVocabularies(projectId);
   const movement = ((shot?.camera ?? {}) as Camera).movement;
 
+  // The same rules the MCP tools return, shown inline as amber hints.
+  const shotWarnings = shot
+    ? lintShotLine({
+        line: shot.description,
+        movement,
+        moves: vocab?.moves ?? [],
+        landmarks: asLandmarks(shot.locations?.landmarks),
+        blockingAnchor: shot.locations?.blocking_anchor ?? null,
+        locationName: shot.locations?.name ?? null,
+      })
+    : [];
+
   async function approveFrame(frameId: string) {
-    await supabase.from("frames").update({ is_approved: false }).eq("shot_id", shotId);
-    const { error } = await supabase.from("frames").update({ is_approved: true }).eq("id", frameId);
-    if (error) return toast.error(error.message);
-    if (shot?.status !== "final") {
-      await supabase.from("shots").update({ status: "approved" }).eq("id", shotId);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      await approveFrameFor(supabase as unknown as DB, {
+        userId: u.user!.id,
+        frameId,
+        purpose: DEFAULT_PURPOSE,
+      });
+    } catch (e) {
+      return toast.error(e instanceof Error ? e.message : "Approval failed");
     }
     qc.invalidateQueries();
-    toast.success("Frame approved — this is now a production decision");
+    toast.success("Frame approved for default — this is now a production decision");
   }
+
 
   async function importForGeneration(generationId: string, files: FileList | null) {
     if (!files?.length) return;
