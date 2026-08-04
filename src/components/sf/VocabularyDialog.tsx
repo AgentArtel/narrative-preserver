@@ -104,12 +104,19 @@ export function VocabularyDialog({
     if (!label.trim()) return;
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
+    // A rate row needs its NOT NULL craft columns; the operator then edits
+    // the credits-per-second in place.
+    const required =
+      table === "model_rates"
+        ? { provider: "higgsfield", model: label.trim(), resolution: "480p", credits_per_second: 1 }
+        : {};
     const { error } = await supabase.from(table).insert({
       user_id: u.user!.id,
       project_id: projectId,
       slug: normalizeToken(label),
       label: label.trim(),
       sort_order: 100,
+      ...required,
     } as never);
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -122,8 +129,9 @@ export function VocabularyDialog({
         <DialogHeader>
           <DialogTitle>Vocabularies</DialogTitle>
           <DialogDescription>
-            Camera moves and render-risk classes for this project. Editing a global entry creates a
-            project override; hiding one removes it from this project only.
+            Camera moves, render-risk classes, the character-sheet checklist, the model rate card
+            and approval purposes for this project. Editing a global entry creates a project
+            override; hiding one removes it from this project only.
           </DialogDescription>
         </DialogHeader>
 
@@ -153,6 +161,47 @@ export function VocabularyDialog({
           onRestore={(row) => restore("risk_classes", row)}
           onAdd={(label) => addRow("risk_classes", label)}
         />
+
+        <Section
+          title="Character-sheet checklist"
+          note="check_sheet cannot inspect pixels — it walks a human through these items. The reason beside each item is why it gets checked honestly."
+          rows={data?.sheetItems ?? []}
+          busy={busy}
+          descriptionField="reason"
+          descriptionPlaceholder="Reason — why this item matters"
+          onPatch={(row, patch) => writeOverride("sheet_checklist_items", row, patch)}
+          onRestore={(row) => restore("sheet_checklist_items", row)}
+          onAdd={(label) => addRow("sheet_checklist_items", label)}
+        />
+
+        <Section
+          title="Model rate card"
+          note="Rates change, so they are rows rather than constants. A 15s retry at the top tier is 330 credits; the same 15s at previs is 15."
+          rows={data?.rates ?? []}
+          busy={busy}
+          numericField={{
+            key: "credits_per_second",
+            label: "cr/s",
+            get: (row) => (row as ModelRateRow).credits_per_second,
+          }}
+          badge={(row) =>
+            `${(row as ModelRateRow).provider} ${(row as ModelRateRow).resolution}`
+          }
+          onPatch={(row, patch) => writeOverride("model_rates", row, patch)}
+          onRestore={(row) => restore("model_rates", row)}
+          onAdd={(label) => addRow("model_rates", label)}
+        />
+
+        <Section
+          title="Approval purposes"
+          note="Approval is scoped: the same frame can be a pass as an armour design and a hold as a face reference."
+          rows={data?.purposes ?? []}
+          busy={busy}
+          onPatch={(row, patch) => writeOverride("approval_purposes", row, patch)}
+          onRestore={(row) => restore("approval_purposes", row)}
+          onAdd={(label) => addRow("approval_purposes", label)}
+        />
+
       </DialogContent>
     </Dialog>
   );
